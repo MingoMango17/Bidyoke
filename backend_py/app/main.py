@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 
 from app import config
-from app.api import error_handlers, sessions, ws
+from app.api import error_handlers, sessions, songs, ws
 from app.core.manager import SessionManager
 from app.services.catalog import SongCatalog
 from app.realtime.hub import Hub
@@ -14,6 +14,7 @@ def create_app() -> FastAPI:
     app.state.hub = Hub()
     error_handlers.install(app)
     app.include_router(sessions.router)
+    app.include_router(songs.router)
     app.include_router(ws.router)
 
     @app.get("/healthz")

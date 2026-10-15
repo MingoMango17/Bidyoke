@@ -18,6 +18,13 @@ class SessionManager:
     def get(self, code: str) -> Session | None:
         return self._sessions.get(code.strip().upper())
 
+    def member_by_token(self, token: str) -> Member | None:
+        for session in self._sessions.values():
+            member = session.member_by_token(token)
+            if member is not None:
+                return member
+        return None
+
     def create(self, host_name: str = "Host") -> tuple[Session, Member]:
         code = self._new_code()
         session = Session(code=code, resolve=self._resolve)
