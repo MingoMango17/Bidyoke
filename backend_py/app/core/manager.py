@@ -31,6 +31,7 @@ class SessionManager:
             role=role,
         )
         session.members[member.member_id] = member
+        session.touch()
         return member
 
     def _new_code(self) -> str:
