@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 
-from app import config
-from app.api import errors, sessions, ws
+from app import config, errors
+from app.api import sessions, ws
 from app.core.manager import SessionManager
 from app.realtime.hub import Hub
 
