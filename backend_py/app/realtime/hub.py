@@ -33,6 +33,11 @@ class Hub:
         for conn in list(self._rooms.get(session.code, {}).values()):
             conn.send(msg)
 
+    def notify(self, session: Session, payload: dict) -> None:
+        msg = {"type": "notice", "payload": payload}
+        for conn in list(self._rooms.get(session.code, {}).values()):
+            conn.send(msg)
+
     @staticmethod
     def _state_msg(session: Session) -> dict:
         return {"type": "state", "payload": session.snapshot()}

@@ -21,6 +21,12 @@ class CommandError(Exception):
         self.message = message
 
 
+@dataclass(frozen=True)
+class Result:
+    changed: bool = False
+    notices: tuple[dict, ...] = ()
+
+
 @dataclass
 class Member:
     member_id: str
@@ -84,25 +90,90 @@ class Session:
         self.touch()
         return True
 
-    def handle(self, member: Member, type_: str, payload: dict) -> bool:
-        """Apply a client command. Returns True if state changed."""
+    def handle(self, member: Member, type_: str, payload: dict) -> Result:
+        """Apply a client command."""
         if type_ == "session.lock":
-            self._require_host(member)
-            locked = payload.get("locked")
-            if not isinstance(locked, bool):
-                raise CommandError("invalid_payload", "`locked` must be a boolean.")
-            if locked == self.locked:
-                return False
-            self.locked = locked
-            self.touch()
-            return True
+            return Result(self._lock(member, payload))
         if type_ == "queue.add":
-            return self._queue_add(member, payload)
+            return Result(self._queue_add(member, payload))
         if type_ == "queue.remove":
-            return self._queue_remove(member, payload)
+            return Result(self._queue_remove(member, payload))
         if type_ == "queue.move":
-            return self._queue_move(member, payload)
+            return Result(self._queue_move(member, payload))
+        if type_ == "player.next":
+            self._require_host(member)
+            return Result(self._skip_current())
+        if type_ == "player.pause":
+            self._require_host(member)
+            return Result(self._set_status("playing", "paused"))
+        if type_ == "player.resume":
+            self._require_host(member)
+            return Result(self._set_status("paused", "playing"))
+        if type_ == "player.ended":
+            self._require_host(member)
+            return Result(self._finish_current(payload))
+        if type_ == "player.error":
+            self._require_host(member)
+            return self._fail_current(payload)
         raise CommandError("unknown_type", f"Unknown message type: {type_}")
+
+    def _lock(self, member: Member, payload: dict) -> bool:
+        self._require_host(member)
+        locked = payload.get("locked")
+        if not isinstance(locked, bool):
+            raise CommandError("invalid_payload", "`locked` must be a boolean.")
+        if locked == self.locked:
+            return False
+        self.locked = locked
+        self.touch()
+        return True
+
+    def _skip_current(self) -> bool:
+        if self.now_playing is None:
+            return False
+        self._advance()
+        return True
+
+    def _set_status(self, expected: str, new: Literal["playing", "paused"]) -> bool:
+        if self.now_playing is None or self.player_status != expected:
+            return False
+        self.player_status = new
+        self.player_updated_at = _now()
+        self.touch()
+        return True
+
+    def _finish_current(self, payload: dict) -> bool:
+        if not self._is_current(payload):
+            return False
+        self._advance()
+        return True
+
+    def _fail_current(self, payload: dict) -> Result:
+        reason = payload.get("reason")
+        if not isinstance(reason, str):
+            raise CommandError("invalid_payload", "`reason` must be a string.")
+        if not self._is_current(payload):
+            return Result()
+        skipped = self.now_playing
+        self._advance()
+        notice = {"kind": "song_skipped", "itemId": skipped.item_id, "reason": reason}
+        return Result(True, (notice,))
+
+    def _is_current(self, payload: dict) -> bool:
+        item_id = payload.get("itemId")
+        if not isinstance(item_id, str):
+            raise CommandError("invalid_payload", "`itemId` must be a string.")
+        return self.now_playing is not None and self.now_playing.item_id == item_id
+
+    def _advance(self) -> None:
+        if self.queue:
+            self.now_playing = self.queue.pop(0)
+            self.player_status = "playing"
+        else:
+            self.now_playing = None
+            self.player_status = "idle"
+        self.player_updated_at = _now()
+        self.touch()
 
     def _queue_add(self, member: Member, payload: dict) -> bool:
         song_id = payload.get("songId")
