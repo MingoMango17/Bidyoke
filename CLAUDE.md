@@ -65,6 +65,19 @@ For multi-step tasks, state a brief plan:
 
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
 
+## 5. Commit Messages
+
+Prefix every commit subject with a type, then a colon and a short description:
+
+- `feature:` new functionality
+- `fix:` bug fix
+- `chore:` maintenance, deps, config, tooling
+- `refactor:` code change with no behavior change
+- `docs:` documentation only
+- `test:` add or change tests
+
+Example: `feature: add video upload endpoint`
+
 ---
 
 These guidelines are working if: fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
