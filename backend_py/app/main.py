@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 
-from app import config, errors
-from app.api import sessions, ws
+from app import config
+from app.api import error_handlers, sessions, ws
 from app.core.manager import SessionManager
 from app.realtime.hub import Hub
 
@@ -10,7 +10,7 @@ def create_app() -> FastAPI:
     app = FastAPI(title="Bidyoke", docs_url="/docs")
     app.state.sessions = SessionManager()
     app.state.hub = Hub()
-    errors.install(app)
+    error_handlers.install(app)
     app.include_router(sessions.router)
     app.include_router(ws.router)
 
