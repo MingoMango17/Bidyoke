@@ -3,13 +3,14 @@ from fastapi import FastAPI
 from app import config
 from app.api import error_handlers, sessions, ws
 from app.core.manager import SessionManager
-from app.services.songs import build_resolver
+from app.services.catalog import SongCatalog
 from app.realtime.hub import Hub
 
 
 def create_app() -> FastAPI:
     app = FastAPI(title="Bidyoke", docs_url="/docs")
-    app.state.sessions = SessionManager(build_resolver())
+    app.state.catalog = SongCatalog.from_config()
+    app.state.sessions = SessionManager(app.state.catalog.resolve)
     app.state.hub = Hub()
     error_handlers.install(app)
     app.include_router(sessions.router)
