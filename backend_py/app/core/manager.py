@@ -4,13 +4,15 @@ from __future__ import annotations
 import secrets
 
 from app.core.session import Member, Role, Session
+from app.core.song import Resolver
 
 CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 CODE_LENGTH = 5
 
 
 class SessionManager:
-    def __init__(self) -> None:
+    def __init__(self, resolve: Resolver) -> None:
+        self._resolve = resolve
         self._sessions: dict[str, Session] = {}
 
     def get(self, code: str) -> Session | None:
@@ -18,7 +20,7 @@ class SessionManager:
 
     def create(self, host_name: str = "Host") -> tuple[Session, Member]:
         code = self._new_code()
-        session = Session(code=code)
+        session = Session(code=code, resolve=self._resolve)
         self._sessions[code] = session
         host = self.add_member(session, host_name, "host")
         return session, host
