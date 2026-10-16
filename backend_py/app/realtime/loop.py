@@ -37,3 +37,5 @@ async def read_loop(ws: WebSocket, hub: Hub, session: Session, member: Member, c
             hub.broadcast(session)
         for notice in result.notices:
             hub.notify(session, notice)
+        if result.position:
+            hub.fan_out_position(session, result.position)

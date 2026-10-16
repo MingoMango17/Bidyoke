@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import secrets
+import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Literal
@@ -10,6 +11,8 @@ from app import config
 from app.core.song import Resolver, Song, SourceUnavailable
 
 Role = Literal["host", "guest"]
+
+POSITION_FANOUT_INTERVAL = 1.0
 
 
 class CommandError(Exception):
@@ -25,6 +28,7 @@ class CommandError(Exception):
 class Result:
     changed: bool = False
     notices: tuple[dict, ...] = ()
+    position: dict | None = None
 
 
 @dataclass
@@ -76,6 +80,8 @@ class Session:
     now_playing: QueueItem | None = None
     player_status: Literal["idle", "playing", "paused"] = "idle"
     player_updated_at: datetime = field(default_factory=_now)
+    player_position_ms: int = 0
+    _last_fanout: float = field(default=-POSITION_FANOUT_INTERVAL, init=False, repr=False)
 
     def member_by_token(self, token: str) -> Member | None:
         for m in self.members.values():
@@ -119,6 +125,9 @@ class Session:
         if type_ == "player.error":
             self._require_host(member)
             return self._fail_current(payload)
+        if type_ == "player.position":
+            self._require_host(member)
+            return self._report_position(payload)
         raise CommandError("unknown_type", f"Unknown message type: {type_}")
 
     def _lock(self, member: Member, payload: dict) -> bool:
@@ -163,6 +172,27 @@ class Session:
         notice = {"kind": "song_skipped", "itemId": skipped.item_id, "reason": reason}
         return Result(True, (notice,))
 
+    def _report_position(self, payload: dict) -> Result:
+        if not self._is_current(payload) or self.now_playing is None:
+            return Result()
+        position = payload.get("positionMs")
+        if not isinstance(position, int) or isinstance(position, bool) or position < 0:
+            raise CommandError("invalid_payload", "`positionMs` must be a non-negative integer.")
+        if self.player_status != "playing":
+            return Result()
+        self.player_position_ms = position
+        now = time.monotonic()
+        if now - self._last_fanout < POSITION_FANOUT_INTERVAL:
+            return Result()
+        self._last_fanout = now
+        return Result(
+            position={
+                "itemId": self.now_playing.item_id,
+                "positionMs": position,
+                "serverTime": int(time.time() * 1000),
+            }
+        )
+
     def _is_current(self, payload: dict) -> bool:
         item_id = payload.get("itemId")
         if not isinstance(item_id, str):
@@ -170,6 +200,7 @@ class Session:
         return self.now_playing is not None and self.now_playing.item_id == item_id
 
     def _advance(self) -> None:
+        self.player_position_ms = 0
         if self.queue:
             self.now_playing = self.queue.pop(0)
             self.player_status = "playing"
@@ -246,7 +277,7 @@ class Session:
             "nowPlaying": self.now_playing.to_dict() if self.now_playing else None,
             "player": {
                 "status": self.player_status,
-                "positionMs": 0,
+                "positionMs": self.player_position_ms,
                 "updatedAt": _iso(self.player_updated_at),
             },
             "members": [

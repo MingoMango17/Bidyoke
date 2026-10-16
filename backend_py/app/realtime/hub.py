@@ -38,6 +38,12 @@ class Hub:
         for conn in list(self._rooms.get(session.code, {}).values()):
             conn.send(msg)
 
+    def fan_out_position(self, session: Session, payload: dict) -> None:
+        msg = {"type": "player.position", "payload": payload}
+        for conn in list(self._rooms.get(session.code, {}).values()):
+            if conn.member.role != "host":
+                conn.send(msg)
+
     @staticmethod
     def _state_msg(session: Session) -> dict:
         return {"type": "state", "payload": session.snapshot()}
