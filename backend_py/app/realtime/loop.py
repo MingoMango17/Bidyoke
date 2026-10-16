@@ -29,7 +29,7 @@ async def read_loop(ws: WebSocket, hub: Hub, session: Session, member: Member, c
             conn.send({"type": "pong"})
             continue
         try:
-            result = session.handle(member, type_, payload)
+            result = await session.handle(member, type_, payload)
         except CommandError as e:
             conn.send(error_msg(e.code, e.message, id_))
             continue

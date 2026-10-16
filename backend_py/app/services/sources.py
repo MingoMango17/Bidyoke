@@ -6,11 +6,11 @@ from app.core.song import Song
 class SongSource(Protocol):
     id: str
 
-    def search(self, q: str, limit: int) -> list[Song]: ...
+    async def search(self, q: str, limit: int) -> list[Song]: ...
 
-    def resolve(self, song_id: str) -> Song | None: ...
+    async def resolve(self, song_id: str) -> Song | None: ...
 
-    def playback(self, song_id: str) -> dict | None: ...
+    async def playback(self, song_id: str) -> dict | None: ...
 
 
 class FixtureSource:
@@ -29,17 +29,17 @@ class FixtureSource:
             for n in range(1, 7)
         }
 
-    def search(self, q: str, limit: int) -> list[Song]:
+    async def search(self, q: str, limit: int) -> list[Song]:
         needle = q.lower()
         hits = [
             s for s in self._songs.values() if needle in f"{s.title} {s.artist}".lower()
         ]
         return hits[:limit]
 
-    def resolve(self, song_id: str) -> Song | None:
+    async def resolve(self, song_id: str) -> Song | None:
         return self._songs.get(song_id)
 
-    def playback(self, song_id: str) -> dict | None:
+    async def playback(self, song_id: str) -> dict | None:
         song = self._songs.get(song_id)
         if song is None:
             return None

@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from typing import Literal
 
 from app import config
-from app.core.song import Resolver, Song
+from app.core.song import Resolver, Song, SourceUnavailable
 
 Role = Literal["host", "guest"]
 
@@ -52,6 +52,10 @@ class QueueItem:
         }
 
 
+async def _no_song(_song_id: str) -> Song | None:
+    return None
+
+
 def _now() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -63,7 +67,7 @@ def _iso(dt: datetime) -> str:
 @dataclass
 class Session:
     code: str
-    resolve: Resolver = field(default=lambda _song_id: None, repr=False, compare=False)
+    resolve: Resolver = field(default=_no_song, repr=False, compare=False)
     locked: bool = False
     rev: int = 0
     created_at: datetime = field(default_factory=_now)
@@ -90,12 +94,12 @@ class Session:
         self.touch()
         return True
 
-    def handle(self, member: Member, type_: str, payload: dict) -> Result:
+    async def handle(self, member: Member, type_: str, payload: dict) -> Result:
         """Apply a client command."""
         if type_ == "session.lock":
             return Result(self._lock(member, payload))
         if type_ == "queue.add":
-            return Result(self._queue_add(member, payload))
+            return Result(await self._queue_add(member, payload))
         if type_ == "queue.remove":
             return Result(self._queue_remove(member, payload))
         if type_ == "queue.move":
@@ -175,11 +179,14 @@ class Session:
         self.player_updated_at = _now()
         self.touch()
 
-    def _queue_add(self, member: Member, payload: dict) -> bool:
+    async def _queue_add(self, member: Member, payload: dict) -> bool:
         song_id = payload.get("songId")
         if not isinstance(song_id, str) or not song_id:
             raise CommandError("invalid_payload", "`songId` must be a non-empty string.")
-        song = self.resolve(song_id)
+        try:
+            song = await self.resolve(song_id)
+        except SourceUnavailable:
+            raise CommandError("source_unavailable", "That source is unavailable.")
         if song is None:
             raise CommandError("song_not_found", "No song with that id.")
         mine = [i for i in self.queue if i.added_by == member.member_id]

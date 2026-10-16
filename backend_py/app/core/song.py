@@ -1,7 +1,11 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
+
+
+class SourceUnavailable(Exception):
+    """A song source could not be reached or refused the request."""
 
 
 @dataclass(frozen=True)
@@ -27,4 +31,4 @@ class Song:
         }
 
 
-Resolver = Callable[[str], Song | None]
+Resolver = Callable[[str], Awaitable[Song | None]]
