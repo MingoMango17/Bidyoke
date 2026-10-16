@@ -242,6 +242,9 @@ class Session:
         notice = {"kind": "member_kicked", "memberId": member_id}
         return Result(True, (notice,), kicked=member_id)
 
+    def pause_for_host_loss(self) -> bool:
+        return self._set_status("playing", "paused")
+
     def _is_current(self, payload: dict) -> bool:
         item_id = payload.get("itemId")
         if not isinstance(item_id, str):
