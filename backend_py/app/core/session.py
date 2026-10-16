@@ -156,9 +156,9 @@ class Session:
         reason = payload.get("reason")
         if not isinstance(reason, str):
             raise CommandError("invalid_payload", "`reason` must be a string.")
-        if not self._is_current(payload):
-            return Result()
         skipped = self.now_playing
+        if not self._is_current(payload) or skipped is None:
+            return Result()
         self._advance()
         notice = {"kind": "song_skipped", "itemId": skipped.item_id, "reason": reason}
         return Result(True, (notice,))
