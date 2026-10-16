@@ -4,11 +4,13 @@ import httpx
 
 from app.core.song import Song, SourceUnavailable
 from app.services.cache import TTLCache
+from app.services.quota import QuotaBudget
 
 API_URL = "https://www.googleapis.com/youtube/v3"
 SEARCH_TTL = 6 * 3600
 SONG_TTL = 24 * 3600
 TIMEOUT = 5.0
+UNIT_COSTS = {"search": 100, "videos": 1}
 
 _VIDEO_ID = re.compile(r"^[A-Za-z0-9_-]{11}$")
 _DURATION = re.compile(r"^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$")
@@ -17,8 +19,14 @@ _DURATION = re.compile(r"^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$")
 class YouTubeSource:
     id = "youtube"
 
-    def __init__(self, api_key: str, transport: httpx.AsyncBaseTransport | None = None) -> None:
+    def __init__(
+        self,
+        api_key: str,
+        budget: QuotaBudget,
+        transport: httpx.AsyncBaseTransport | None = None,
+    ) -> None:
         self._key = api_key
+        self._budget = budget
         self._transport = transport
         self._searches = TTLCache(SEARCH_TTL)
         self._songs = TTLCache(SONG_TTL)
@@ -69,6 +77,7 @@ class YouTubeSource:
         return [s for s in (self._songs.get(i) for i in ids) if s is not None]
 
     async def _get(self, path: str, params: dict) -> dict:
+        self._budget.charge(UNIT_COSTS[path])
         try:
             async with httpx.AsyncClient(transport=self._transport, timeout=TIMEOUT) as client:
                 response = await client.get(f"{API_URL}/{path}", params={**params, "key": self._key})

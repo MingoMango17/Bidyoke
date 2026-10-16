@@ -11,3 +11,5 @@ ALLOWED_ORIGINS = [o.strip() for o in os.environ.get("ALLOWED_ORIGINS", "").spli
 PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "http://localhost:5173").rstrip("/")
 FIXTURE_SONGS = os.environ.get("FIXTURE_SONGS", "off") == "on"
 YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY", "")
+YOUTUBE_DAILY_BUDGET = int(os.environ.get("YOUTUBE_DAILY_BUDGET", "5000"))
+QUOTA_FILE = os.environ.get("QUOTA_FILE", ".youtube_quota.json")

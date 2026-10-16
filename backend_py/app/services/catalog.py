@@ -1,6 +1,7 @@
 from app import config
 from app.core.song import Song, SourceUnavailable
 from app.errors import AppError
+from app.services.quota import QuotaBudget
 from app.services.sources import FixtureSource, SongSource
 from app.services.youtube import YouTubeSource
 
@@ -17,7 +18,8 @@ class SongCatalog:
         if config.FIXTURE_SONGS and "local" in config.SOURCES:
             sources.append(FixtureSource())
         if config.YOUTUBE_API_KEY and "youtube" in config.SOURCES:
-            sources.append(YouTubeSource(config.YOUTUBE_API_KEY))
+            budget = QuotaBudget(config.YOUTUBE_DAILY_BUDGET, config.QUOTA_FILE)
+            sources.append(YouTubeSource(config.YOUTUBE_API_KEY, budget))
         return cls(sources)
 
     async def search(self, q: str, source: str | None, limit: int) -> tuple[list[Song], list[str]]:
