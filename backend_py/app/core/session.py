@@ -81,6 +81,8 @@ class Session:
     player_status: Literal["idle", "playing", "paused"] = "idle"
     player_updated_at: datetime = field(default_factory=_now)
     player_position_ms: int = 0
+    history: list[QueueItem] = field(default_factory=list)
+    scores: list[dict] = field(default_factory=list)
     _last_fanout: float = field(default=-POSITION_FANOUT_INTERVAL, init=False, repr=False)
 
     def member_by_token(self, token: str) -> Member | None:
@@ -128,6 +130,8 @@ class Session:
         if type_ == "player.position":
             self._require_host(member)
             return self._report_position(payload)
+        if type_ == "score.submit":
+            return Result(self._submit_score(member, payload))
         raise CommandError("unknown_type", f"Unknown message type: {type_}")
 
     def _lock(self, member: Member, payload: dict) -> bool:
@@ -193,6 +197,29 @@ class Session:
             }
         )
 
+    def _submit_score(self, member: Member, payload: dict) -> bool:
+        item_id = payload.get("itemId")
+        if not isinstance(item_id, str):
+            raise CommandError("invalid_payload", "`itemId` must be a string.")
+        sung = [i for i in (*self.history, self.now_playing) if i is not None]
+        item = next((i for i in sung if i.item_id == item_id), None)
+        if item is None:
+            raise CommandError("invalid_payload", "No played item with that id.")
+        if item.added_by != member.member_id:
+            raise CommandError("forbidden", "Only the singer can submit a score.")
+        score = payload.get("score")
+        if isinstance(score, bool) or not isinstance(score, (int, float)) or not 0 <= score <= 100:
+            raise CommandError("invalid_payload", "`score` must be a number from 0 to 100.")
+        breakdown = payload.get("breakdown", {})
+        if not isinstance(breakdown, dict):
+            raise CommandError("invalid_payload", "`breakdown` must be an object.")
+        self.scores = [x for x in self.scores if x["itemId"] != item_id]
+        self.scores.append(
+            {"itemId": item_id, "memberId": member.member_id, "score": score, "breakdown": breakdown}
+        )
+        self.touch()
+        return True
+
     def _is_current(self, payload: dict) -> bool:
         item_id = payload.get("itemId")
         if not isinstance(item_id, str):
@@ -200,6 +227,8 @@ class Session:
         return self.now_playing is not None and self.now_playing.item_id == item_id
 
     def _advance(self) -> None:
+        if self.now_playing is not None:
+            self.history.append(self.now_playing)
         self.player_position_ms = 0
         if self.queue:
             self.now_playing = self.queue.pop(0)
@@ -284,7 +313,7 @@ class Session:
                 {"memberId": m.member_id, "name": m.name, "role": m.role, "connected": m.connected}
                 for m in self.members.values()
             ],
-            "scores": [],
+            "scores": self.scores,
             "settings": {
                 "maxQueuePerMember": config.MAX_QUEUE_PER_MEMBER,
                 "locked": self.locked,
