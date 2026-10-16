@@ -25,6 +25,9 @@ class SessionManager:
                 return member
         return None
 
+    def remove(self, code: str) -> None:
+        self._sessions.pop(code, None)
+
     def create(self, host_name: str = "Host") -> tuple[Session, Member]:
         code = self._new_code()
         session = Session(code=code, resolve=self._resolve)

@@ -11,7 +11,7 @@ def create_app() -> FastAPI:
     app = FastAPI(title="Bidyoke", docs_url="/docs")
     app.state.catalog = SongCatalog.from_config()
     app.state.sessions = SessionManager(app.state.catalog.resolve)
-    app.state.hub = Hub()
+    app.state.hub = Hub(app.state.sessions)
     error_handlers.install(app)
     app.include_router(sessions.router)
     app.include_router(songs.router)

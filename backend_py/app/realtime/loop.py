@@ -39,3 +39,8 @@ async def read_loop(ws: WebSocket, hub: Hub, session: Session, member: Member, c
             hub.notify(session, notice)
         if result.position:
             hub.fan_out_position(session, result.position)
+        if result.kicked:
+            await hub.kick(session, result.kicked)
+        if result.ended:
+            await hub.end_session(session)
+            return

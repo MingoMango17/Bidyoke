@@ -29,6 +29,8 @@ class Result:
     changed: bool = False
     notices: tuple[dict, ...] = ()
     position: dict | None = None
+    kicked: str | None = None
+    ended: bool = False
 
 
 @dataclass
@@ -130,6 +132,12 @@ class Session:
         if type_ == "player.position":
             self._require_host(member)
             return self._report_position(payload)
+        if type_ == "session.kick":
+            self._require_host(member)
+            return self._kick(payload)
+        if type_ == "session.end":
+            self._require_host(member)
+            return Result(ended=True)
         if type_ == "score.submit":
             return Result(self._submit_score(member, payload))
         raise CommandError("unknown_type", f"Unknown message type: {type_}")
@@ -219,6 +227,20 @@ class Session:
         )
         self.touch()
         return True
+
+    def _kick(self, payload: dict) -> Result:
+        member_id = payload.get("memberId")
+        if not isinstance(member_id, str):
+            raise CommandError("invalid_payload", "`memberId` must be a string.")
+        target = self.members.get(member_id)
+        if target is None:
+            raise CommandError("invalid_payload", "No member with that id.")
+        if target.role == "host":
+            raise CommandError("invalid_payload", "The host cannot be kicked.")
+        del self.members[member_id]
+        self.touch()
+        notice = {"kind": "member_kicked", "memberId": member_id}
+        return Result(True, (notice,), kicked=member_id)
 
     def _is_current(self, payload: dict) -> bool:
         item_id = payload.get("itemId")
