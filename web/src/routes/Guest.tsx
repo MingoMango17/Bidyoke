@@ -2,7 +2,7 @@ import { Link, useParams } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { useRejoin, useSessionInfo } from '../api/sessions'
 import { Card } from '../components/Layout'
-import { ConnectionBadge } from '../components/ConnectionBadge'
+import { GuestSession } from '../components/GuestSession'
 import { JoinForm } from '../components/JoinForm'
 import { clearIdentity, loadIdentity, saveIdentity, type Identity } from '../lib/identity'
 import { useSession } from '../session/useSession'
@@ -32,18 +32,7 @@ export function Guest() {
   }
 
   if (identity && !rejoin.isError) {
-    return (
-      <Card title={`Session ${code}`}>
-        <div className="flex flex-col gap-2">
-          <ConnectionBadge
-            status={session.status}
-            closeReason={session.closeReason}
-            onReconnect={session.reconnect}
-          />
-          {session.state && <p>{session.state.members.length} people in this session.</p>}
-        </div>
-      </Card>
-    )
+    return <GuestSession identity={identity} session={session} />
   }
 
   if (info.isError) {

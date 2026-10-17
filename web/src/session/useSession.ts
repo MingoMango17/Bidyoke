@@ -36,6 +36,8 @@ async function checkIdentity(code: string, token: string): Promise<IdentityCheck
   }
 }
 
+export type SessionApi = ReturnType<typeof useSession>
+
 export function useSession(identity: Identity | undefined) {
   const code = identity?.code
   const token = identity?.token
