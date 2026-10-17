@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -7,15 +8,27 @@ from app import config
 from app.api import error_handlers, sessions, songs, ws
 from app.container import Container
 from app.core.manager import SessionManager
+from app.logs import setup_logging
 from app.ratelimit import KeyedLimiter
 from app.reaper import reap_idle
 from app.realtime.hub import Hub
 from app.services.catalog import SongCatalog
 
 
+log = logging.getLogger(__name__)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     container: Container = app.state.container
+    log.info(
+        "starting sources=%s youtube_key=%s youtube_budget=%s ttl=%ss grace=%ss",
+        ",".join(config.SOURCES),
+        "set" if config.YOUTUBE_API_KEY else "missing",
+        config.YOUTUBE_DAILY_BUDGET,
+        config.SESSION_TTL,
+        config.HOST_GRACE_SECONDS,
+    )
     reaper = asyncio.create_task(
         reap_idle(container.sessions, container.hub.end_session, config.SESSION_TTL)
     )
@@ -24,6 +37,7 @@ async def lifespan(app: FastAPI):
 
 
 def create_app() -> FastAPI:
+    setup_logging()
     app = FastAPI(title="Bidyoke", docs_url="/docs", lifespan=lifespan)
     catalog = SongCatalog.from_config()
     session_manager = SessionManager(catalog.resolve)

@@ -50,6 +50,7 @@ All settings are environment variables.
 | `SESSION_TTL` | `21600` | Idle seconds before a session is ended. |
 | `JOIN_RATE_PER_MIN` | `60` | Joins per minute per IP and session. |
 | `SEARCH_RATE_PER_MIN` | `20` | Searches per minute per member. |
+| `LOG_LEVEL` | `INFO` | Log verbosity: `DEBUG`, `INFO`, `WARNING`, `ERROR`. |
 | `MEDIA_AUTH` | `off` | Reserved for the local library. |
 
 ## Tests
