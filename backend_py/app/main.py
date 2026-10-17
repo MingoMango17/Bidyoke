@@ -1,3 +1,6 @@
+import asyncio
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
 from app import config
@@ -5,12 +8,23 @@ from app.api import error_handlers, sessions, songs, ws
 from app.container import Container
 from app.core.manager import SessionManager
 from app.ratelimit import KeyedLimiter
+from app.reaper import reap_idle
 from app.realtime.hub import Hub
 from app.services.catalog import SongCatalog
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    container: Container = app.state.container
+    reaper = asyncio.create_task(
+        reap_idle(container.sessions, container.hub.end_session, config.SESSION_TTL)
+    )
+    yield
+    reaper.cancel()
+
+
 def create_app() -> FastAPI:
-    app = FastAPI(title="Bidyoke", docs_url="/docs")
+    app = FastAPI(title="Bidyoke", docs_url="/docs", lifespan=lifespan)
     catalog = SongCatalog.from_config()
     session_manager = SessionManager(catalog.resolve)
     app.state.container = Container(
