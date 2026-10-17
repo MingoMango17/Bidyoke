@@ -18,6 +18,13 @@ export interface JoinResponse {
   token: string
 }
 
+export interface AppConfig {
+  sources: string[]
+  mediaAuth: string
+  maxQueuePerMember: number
+  protocolVersion: number
+}
+
 export interface RejoinResponse {
   memberId: string
   role: Role
