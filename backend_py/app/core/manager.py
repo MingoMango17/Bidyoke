@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import secrets
+import time
 
 from app.core.session import Member, Role, Session
 from app.core.song import Resolver
@@ -27,6 +28,10 @@ class SessionManager:
 
     def remove(self, code: str) -> None:
         self._sessions.pop(code, None)
+
+    def idle(self, ttl: float) -> list[Session]:
+        cutoff = time.monotonic() - ttl
+        return [s for s in self._sessions.values() if s.last_activity < cutoff]
 
     def create(self, host_name: str = "Host") -> tuple[Session, Member]:
         code = self._new_code()

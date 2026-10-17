@@ -76,6 +76,7 @@ class Session:
     resolve: Resolver = field(default=_no_song, repr=False, compare=False)
     locked: bool = False
     rev: int = 0
+    last_activity: float = field(default_factory=time.monotonic)
     created_at: datetime = field(default_factory=_now)
     members: dict[str, Member] = field(default_factory=dict)  # keyed by memberId
     queue: list[QueueItem] = field(default_factory=list)
@@ -96,6 +97,7 @@ class Session:
     def touch(self) -> None:
         """Mark state changed. Every visible change bumps `rev`."""
         self.rev += 1
+        self.last_activity = time.monotonic()
 
     def set_connected(self, member: Member, connected: bool) -> bool:
         if member.connected == connected:
