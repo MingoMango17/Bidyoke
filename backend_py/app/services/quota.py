@@ -1,9 +1,12 @@
 import json
+import logging
 from collections.abc import Callable
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from app.core.song import SourceUnavailable
+
+log = logging.getLogger(__name__)
 
 QUOTA_TZ = ZoneInfo("America/Los_Angeles")
 
@@ -33,6 +36,7 @@ class QuotaBudget:
         if day != self._day:
             self._day, self._used = day, 0
         if self._used + units > self._limit:
+            log.warning("youtube quota budget reached used=%d limit=%d", self._used, self._limit)
             raise SourceUnavailable("Daily YouTube quota budget reached.")
         self._used += units
         self._save()

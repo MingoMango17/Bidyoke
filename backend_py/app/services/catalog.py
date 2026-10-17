@@ -1,9 +1,13 @@
+import logging
+
 from app import config
 from app.core.song import Song, SourceUnavailable
 from app.errors import AppError
 from app.services.quota import QuotaBudget
 from app.services.sources import FixtureSource, SongSource
 from app.services.youtube import YouTubeSource
+
+log = logging.getLogger(__name__)
 
 KNOWN_SOURCES = ("youtube", "local")
 
@@ -37,6 +41,7 @@ class SongCatalog:
             try:
                 results.extend(await self._sources[source_id].search(q, limit))
             except SourceUnavailable:
+                log.warning("search skipped unavailable source=%s", source_id)
                 continue
             queried.append(source_id)
         if ids and not queried:

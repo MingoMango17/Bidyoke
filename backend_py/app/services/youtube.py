@@ -1,3 +1,4 @@
+import logging
 import re
 
 import httpx
@@ -5,6 +6,8 @@ import httpx
 from app.core.song import Song, SourceUnavailable
 from app.services.cache import TTLCache
 from app.services.quota import QuotaBudget
+
+log = logging.getLogger(__name__)
 
 API_URL = "https://www.googleapis.com/youtube/v3"
 SEARCH_TTL = 6 * 3600
@@ -81,11 +84,25 @@ class YouTubeSource:
         try:
             async with httpx.AsyncClient(transport=self._transport, timeout=TIMEOUT) as client:
                 response = await client.get(f"{API_URL}/{path}", params={**params, "key": self._key})
-        except httpx.HTTPError:
+        except httpx.HTTPError as e:
+            log.warning("youtube request failed path=%s error=%s", path, type(e).__name__)
             raise SourceUnavailable("YouTube request failed.") from None
         if response.status_code != 200:
+            log.warning(
+                "youtube error path=%s status=%s reason=%s",
+                path,
+                response.status_code,
+                _error_reason(response),
+            )
             raise SourceUnavailable(f"YouTube returned {response.status_code}.")
         return response.json()
+
+
+def _error_reason(response: httpx.Response) -> str:
+    try:
+        return response.json()["error"]["errors"][0]["reason"]
+    except (ValueError, KeyError, IndexError, TypeError):
+        return "unknown"
 
 
 def _to_song(item: dict) -> Song:
