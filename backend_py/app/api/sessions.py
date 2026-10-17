@@ -1,18 +1,19 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends
 
 from app import config
-from app.api.deps import bearer_token, get_hub, get_sessions, require_session
-from app.errors import AppError
+from app.api.deps import bearer_token, get_container, require_session
 from app.api.schemas import JoinBody
+from app.container import Container
 from app.core.session import Session
 from app.core.validation import clean_name
+from app.errors import AppError
 
 router = APIRouter(prefix="/api/sessions")
 
 
 @router.post("", status_code=201)
-async def create_session(request: Request):
-    session, host = get_sessions(request).create()
+async def create_session(container: Container = Depends(get_container)):
+    session, host = container.sessions.create()
     return {
         "code": session.code,
         "memberId": host.member_id,
@@ -28,12 +29,14 @@ async def get_session(session: Session = Depends(require_session)):
 
 @router.post("/{code}/join")
 async def join_session(
-    request: Request, body: JoinBody, session: Session = Depends(require_session)
+    body: JoinBody,
+    session: Session = Depends(require_session),
+    container: Container = Depends(get_container),
 ):
     if session.locked:
         raise AppError(403, "session_locked", "This session is not accepting new members.")
-    guest = get_sessions(request).add_member(session, clean_name(body.name), "guest")
-    get_hub(request).broadcast(session)
+    guest = container.sessions.add_member(session, clean_name(body.name), "guest")
+    container.hub.broadcast(session)
     return {"memberId": guest.member_id, "token": guest.token}
 
 

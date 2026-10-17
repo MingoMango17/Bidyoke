@@ -2,16 +2,21 @@ from fastapi import FastAPI
 
 from app import config
 from app.api import error_handlers, sessions, songs, ws
+from app.container import Container
 from app.core.manager import SessionManager
-from app.services.catalog import SongCatalog
 from app.realtime.hub import Hub
+from app.services.catalog import SongCatalog
 
 
 def create_app() -> FastAPI:
     app = FastAPI(title="Bidyoke", docs_url="/docs")
-    app.state.catalog = SongCatalog.from_config()
-    app.state.sessions = SessionManager(app.state.catalog.resolve)
-    app.state.hub = Hub(app.state.sessions, config.HOST_GRACE_SECONDS)
+    catalog = SongCatalog.from_config()
+    session_manager = SessionManager(catalog.resolve)
+    app.state.container = Container(
+        catalog=catalog,
+        sessions=session_manager,
+        hub=Hub(session_manager, config.HOST_GRACE_SECONDS),
+    )
     error_handlers.install(app)
     app.include_router(sessions.router)
     app.include_router(songs.router)
