@@ -49,3 +49,27 @@ def test_reaper_ends_idle_sessions_only():
     assert ended == [old.code]
     assert manager.get(old.code) is None
     assert manager.get(fresh.code) is fresh
+
+
+def test_reaper_survives_a_failing_end():
+    manager = make_manager()
+    first, _ = manager.create()
+    second, _ = manager.create()
+    first.last_activity -= 100
+    second.last_activity -= 100
+    ended = []
+
+    async def end(session):
+        if session.code == first.code:
+            raise RuntimeError("boom")
+        manager.remove(session.code)
+        ended.append(session.code)
+
+    async def run():
+        task = asyncio.create_task(reap_idle(manager, end, ttl=50, interval=0.01))
+        await asyncio.sleep(0.05)
+        assert not task.done()
+        task.cancel()
+
+    asyncio.run(run())
+    assert ended == [second.code]
