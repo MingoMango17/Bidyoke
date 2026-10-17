@@ -48,7 +48,7 @@ All settings are environment variables.
 | `MAX_MEMBERS` | `50` | Members per session. |
 | `HOST_GRACE_SECONDS` | `120` | How long a disconnected host can come back before the session ends. |
 | `SESSION_TTL` | `21600` | Idle seconds before a session is ended. |
-| `JOIN_RATE_PER_MIN` | `30` | Joins per minute per IP and session. |
+| `JOIN_RATE_PER_MIN` | `60` | Joins per minute per IP and session. |
 | `SEARCH_RATE_PER_MIN` | `20` | Searches per minute per member. |
 | `MEDIA_AUTH` | `off` | Reserved for the local library. |
 
