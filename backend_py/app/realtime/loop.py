@@ -1,15 +1,24 @@
 from fastapi import WebSocket
 
 from app.core.session import CommandError, Member, Session
+from app.ratelimit import TokenBucket
 from app.realtime.conn import Conn
 from app.realtime.hub import Hub
 from app.realtime.protocol import MAX_MESSAGE_BYTES, BadFrame, error_msg, parse_frame
 
 
+WS_RATE_PER_SEC = 20
+WS_BURST = 40
+
+
 async def read_loop(ws: WebSocket, hub: Hub, session: Session, member: Member, conn: Conn):
+    bucket = TokenBucket(WS_RATE_PER_SEC, WS_BURST)
     while True:
         event = await ws.receive()
         if event["type"] == "websocket.disconnect":
+            return
+        if not bucket.allow():
+            await conn.close(4008)
             return
         text = event.get("text")
         if text is None:
