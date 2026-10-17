@@ -1,0 +1,86 @@
+import { useEffect, useState } from 'react'
+import { usePlayback } from '../api/songs'
+import type { Identity } from '../lib/identity'
+import type { SessionApi } from '../session/useSession'
+import { buttonClass, Card } from './Layout'
+import { YouTubePlayer } from './YouTubePlayer'
+
+interface Props {
+  identity: Identity
+  session: SessionApi
+}
+
+const controlClass =
+  'rounded-lg border border-zinc-300 px-4 py-2 font-medium disabled:opacity-40 dark:border-zinc-700'
+
+export function HostPlayer({ identity, session }: Props) {
+  const [started, setStarted] = useState(false)
+  const state = session.state
+  const item = state?.nowPlaying ?? undefined
+  const itemId = item?.itemId
+  const playback = usePlayback(started ? item?.song.songId : undefined, identity.token)
+  const { send } = session
+
+  useEffect(() => {
+    if (itemId && playback.isError) send('player.error', { itemId, reason: 'playback_unavailable' })
+  }, [itemId, playback.isError, send])
+
+  if (!started) {
+    return (
+      <Card title="Ready to start?">
+        <p className="mb-3 text-sm text-zinc-500">
+          Tap once so the browser allows sound, then songs play automatically.
+        </p>
+        <button className={buttonClass} onClick={() => setStarted(true)}>
+          Start session
+        </button>
+      </Card>
+    )
+  }
+
+  const playing = state?.player.status === 'playing'
+  const info = playback.data?.playback
+
+  let screen
+  if (!item) {
+    screen = <p className="p-6 text-zinc-400">Waiting for the first song…</p>
+  } else if (info?.kind === 'local') {
+    screen = <p className="p-6 text-zinc-400">Library songs can't be played here yet.</p>
+  } else if (info?.kind === 'youtube') {
+    screen = (
+      <YouTubePlayer
+        videoId={info.videoId}
+        playing={playing}
+        onEnded={() => send('player.ended', { itemId: item.itemId })}
+        onError={(reason) => send('player.error', { itemId: item.itemId, reason })}
+        onPosition={(positionMs) => send('player.position', { itemId: item.itemId, positionMs })}
+      />
+    )
+  } else {
+    screen = <p className="p-6 text-zinc-400">Loading song…</p>
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="aspect-video w-full overflow-hidden rounded-xl bg-black">{screen}</div>
+      {item && (
+        <p className="truncate text-lg font-semibold">
+          {item.song.title}
+          {item.song.artist && <span className="font-normal text-zinc-500"> · {item.song.artist}</span>}
+        </p>
+      )}
+      <div className="flex gap-2">
+        <button
+          className={controlClass}
+          disabled={!item}
+          onClick={() => send(playing ? 'player.pause' : 'player.resume')}
+        >
+          {playing ? 'Pause' : 'Resume'}
+        </button>
+        <button className={controlClass} disabled={!item} onClick={() => send('player.next')}>
+          Next
+        </button>
+      </div>
+    </div>
+  )
+}

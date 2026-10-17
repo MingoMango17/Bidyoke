@@ -1,10 +1,9 @@
 import { useConfig } from '../api/songs'
-import { noticeText } from '../lib/notices'
 import type { Identity } from '../lib/identity'
 import type { SessionApi } from '../session/useSession'
 import { ConnectionBadge } from './ConnectionBadge'
-import { Flash } from './Flash'
 import { QueueList } from './QueueList'
+import { SessionFlashes } from './SessionFlashes'
 import { SongSearch } from './SongSearch'
 
 interface Props {
@@ -29,12 +28,7 @@ export function GuestSession({ identity, session }: Props) {
           onReconnect={session.reconnect}
         />
       </header>
-      <Flash item={session.lastError} message={session.lastError?.message} tone="error" />
-      <Flash
-        item={session.lastNotice}
-        message={session.lastNotice && noticeText(session.lastNotice)}
-        tone="info"
-      />
+      <SessionFlashes session={session} />
       {state ? (
         <>
           <QueueList
