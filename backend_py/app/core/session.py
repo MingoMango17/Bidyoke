@@ -283,6 +283,8 @@ class Session:
             raise CommandError(
                 "queue_full", f"You already have {config.MAX_QUEUE_PER_MEMBER} songs queued."
             )
+        if len(self.queue) >= config.MAX_QUEUE_TOTAL:
+            raise CommandError("queue_full", "The queue is full.")
         item = QueueItem("q_" + secrets.token_hex(4), song, member.member_id, _now())
         if self.now_playing is None:
             self.now_playing = item

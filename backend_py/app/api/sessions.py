@@ -35,6 +35,8 @@ async def join_session(
 ):
     if session.locked:
         raise AppError(403, "session_locked", "This session is not accepting new members.")
+    if len(session.members) >= config.MAX_MEMBERS:
+        raise AppError(403, "session_full", "This session is full.")
     guest = container.sessions.add_member(session, clean_name(body.name), "guest")
     container.hub.broadcast(session)
     return {"memberId": guest.member_id, "token": guest.token}
