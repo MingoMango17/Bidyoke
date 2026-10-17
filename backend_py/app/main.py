@@ -4,6 +4,7 @@ from app import config
 from app.api import error_handlers, sessions, songs, ws
 from app.container import Container
 from app.core.manager import SessionManager
+from app.ratelimit import KeyedLimiter
 from app.realtime.hub import Hub
 from app.services.catalog import SongCatalog
 
@@ -16,6 +17,8 @@ def create_app() -> FastAPI:
         catalog=catalog,
         sessions=session_manager,
         hub=Hub(session_manager, config.HOST_GRACE_SECONDS),
+        join_limiter=KeyedLimiter(config.JOIN_RATE_PER_MIN),
+        search_limiter=KeyedLimiter(config.SEARCH_RATE_PER_MIN),
     )
     error_handlers.install(app)
     app.include_router(sessions.router)

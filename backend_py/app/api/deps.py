@@ -1,4 +1,4 @@
-from fastapi import Depends, Header
+from fastapi import Depends, Header, Request
 from starlette.requests import HTTPConnection
 
 from app.container import Container
@@ -8,6 +8,16 @@ from app.errors import AppError
 
 def get_container(conn: HTTPConnection) -> Container:
     return conn.app.state.container
+
+
+def _rate_limited() -> AppError:
+    return AppError(429, "rate_limited", "Too many requests. Try again shortly.")
+
+
+def limit_join(request: Request, code: str, container: Container = Depends(get_container)) -> None:
+    host = request.client.host if request.client else "unknown"
+    if not container.join_limiter.allow(f"{host}:{code.upper()}"):
+        raise _rate_limited()
 
 
 def require_session(code: str, container: Container = Depends(get_container)) -> Session:
@@ -32,3 +42,9 @@ def require_member(
         raise AppError(401, "invalid_token", "Missing or invalid token.")
     return member
 
+
+def limit_search(
+    member: Member = Depends(require_member), container: Container = Depends(get_container)
+) -> None:
+    if not container.search_limiter.allow(member.member_id):
+        raise _rate_limited()

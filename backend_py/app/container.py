@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from app.core.manager import SessionManager
+from app.ratelimit import KeyedLimiter
 from app.realtime.hub import Hub
 from app.services.catalog import SongCatalog
 
@@ -10,3 +11,5 @@ class Container:
     catalog: SongCatalog
     sessions: SessionManager
     hub: Hub
+    join_limiter: KeyedLimiter
+    search_limiter: KeyedLimiter

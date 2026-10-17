@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 
 from app import config
-from app.api.deps import bearer_token, get_container, require_session
+from app.api.deps import bearer_token, get_container, limit_join, require_session
 from app.api.schemas import JoinBody
 from app.container import Container
 from app.core.session import Session
@@ -27,7 +27,7 @@ async def get_session(session: Session = Depends(require_session)):
     return {"code": session.code, "memberCount": len(session.members), "locked": session.locked}
 
 
-@router.post("/{code}/join")
+@router.post("/{code}/join", dependencies=[Depends(limit_join)])
 async def join_session(
     body: JoinBody,
     session: Session = Depends(require_session),

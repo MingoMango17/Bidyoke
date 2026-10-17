@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 
-from app.api.deps import get_container, require_member
+from app.api.deps import get_container, limit_search, require_member
 from app.container import Container
 from app.core.song import SourceUnavailable
 from app.errors import AppError
@@ -11,7 +11,7 @@ QUERY_MAX = 100
 LIMIT_MAX = 50
 
 
-@router.get("/search")
+@router.get("/search", dependencies=[Depends(limit_search)])
 async def search(
     q: str = "",
     source: str | None = None,
