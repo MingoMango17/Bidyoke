@@ -1,6 +1,11 @@
 import { Link, useParams } from '@tanstack/react-router'
 import { Card } from '../components/Layout'
 import { ConnectionBadge } from '../components/ConnectionBadge'
+import { HostPlayer } from '../components/HostPlayer'
+import { HostQueue } from '../components/HostQueue'
+import { JoinCard } from '../components/JoinCard'
+import { MemberList } from '../components/MemberList'
+import { SessionFlashes } from '../components/SessionFlashes'
 import { loadIdentity } from '../lib/identity'
 import { useSession } from '../session/useSession'
 
@@ -21,24 +26,30 @@ export function Host() {
     )
   }
 
+  const { state } = session
   return (
-    <Card title="Host screen">
-      <p className="text-sm text-zinc-500">Session code</p>
-      <p className="text-5xl font-bold tracking-widest">{code}</p>
-      <div className="mt-4 flex flex-col gap-2">
+    <>
+      <header className="flex flex-col gap-1">
+        <h1 className="text-2xl font-bold">Host · {code}</h1>
         <ConnectionBadge
           status={session.status}
           closeReason={session.closeReason}
           onReconnect={session.reconnect}
         />
-        <ul className="text-sm">
-          {session.state?.members.map((m) => (
-            <li key={m.memberId} className={m.connected ? '' : 'text-zinc-400'}>
-              {m.name} ({m.role})
-            </li>
-          ))}
-        </ul>
+      </header>
+      <SessionFlashes session={session} />
+      <div className="grid items-start gap-6 lg:grid-cols-[2fr_1fr]">
+        <HostPlayer identity={identity} session={session} />
+        <div className="flex flex-col gap-6">
+          <JoinCard code={code} />
+          {state && (
+            <>
+              <HostQueue state={state} send={session.send} />
+              <MemberList state={state} send={session.send} />
+            </>
+          )}
+        </div>
       </div>
-    </Card>
+    </>
   )
 }

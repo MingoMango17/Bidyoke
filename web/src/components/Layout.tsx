@@ -1,9 +1,11 @@
 import type { ReactNode } from 'react'
 
-export function Layout({ children }: { children: ReactNode }) {
+export function Layout({ children, wide = false }: { children: ReactNode; wide?: boolean }) {
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
-      <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-6 px-4 py-10">
+      <main
+        className={`mx-auto flex min-h-screen flex-col justify-center gap-6 px-4 py-10 ${wide ? 'max-w-6xl' : 'max-w-md'}`}
+      >
         {children}
       </main>
     </div>
