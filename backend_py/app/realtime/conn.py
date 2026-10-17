@@ -1,9 +1,12 @@
 import asyncio
 import json
+import logging
 
 from fastapi import WebSocket
 
 from app.core.session import Member
+
+log = logging.getLogger(__name__)
 
 OUTBOX_SIZE = 64
 
@@ -28,6 +31,7 @@ class Conn:
         try:
             self.out.put_nowait(msg)
         except asyncio.QueueFull:
+            log.warning("outbox full, closing member=%s", self.member.member_id)
             asyncio.create_task(self._close(1013))
 
     async def _close(self, code: int) -> None:

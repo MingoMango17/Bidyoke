@@ -1,11 +1,14 @@
 """Session registry, join codes, and member creation."""
 from __future__ import annotations
 
+import logging
 import secrets
 import time
 
 from app.core.session import Member, Role, Session
 from app.core.song import Resolver
+
+log = logging.getLogger(__name__)
 
 CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 CODE_LENGTH = 5
@@ -27,7 +30,8 @@ class SessionManager:
         return None
 
     def remove(self, code: str) -> None:
-        self._sessions.pop(code, None)
+        if self._sessions.pop(code, None) is not None:
+            log.info("session removed code=%s", code)
 
     def idle(self, ttl: float) -> list[Session]:
         cutoff = time.monotonic() - ttl
@@ -37,6 +41,7 @@ class SessionManager:
         code = self._new_code()
         session = Session(code=code, resolve=self._resolve)
         self._sessions[code] = session
+        log.info("session created code=%s", code)
         host = self.add_member(session, host_name, "host")
         return session, host
 
@@ -49,6 +54,7 @@ class SessionManager:
         )
         session.members[member.member_id] = member
         session.touch()
+        log.info("member added code=%s member=%s role=%s", session.code, member.member_id, role)
         return member
 
     def _new_code(self) -> str:

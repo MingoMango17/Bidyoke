@@ -1,11 +1,16 @@
+import logging
+
 from fastapi import WebSocket
 from fastapi.responses import JSONResponse
 
 from app import config
 
+log = logging.getLogger(__name__)
+
 
 async def deny(ws: WebSocket, status: int, code: str, message: str) -> None:
     """Reject before upgrade with a real HTTP status."""
+    log.info("ws denied status=%s code=%s path=%s", status, code, ws.url.path)
     try:
         await ws.send_denial_response(
             JSONResponse({"error": {"code": code, "message": message}}, status_code=status)

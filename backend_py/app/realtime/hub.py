@@ -1,8 +1,11 @@
 import asyncio
+import logging
 
 from app.core.manager import SessionManager
 from app.core.session import Session
 from app.realtime.conn import Conn
+
+log = logging.getLogger(__name__)
 
 
 class Hub:
@@ -18,7 +21,9 @@ class Hub:
         room = self._rooms.setdefault(session.code, {})
         old = room.get(conn.member.member_id)
         room[conn.member.member_id] = conn
+        log.info("ws connected code=%s member=%s role=%s", session.code, conn.member.member_id, conn.member.role)
         if old is not None:
+            log.info("ws replaced code=%s member=%s", session.code, conn.member.member_id)
             await old.close(4009)  # replaced by newer connection
         if session.set_connected(conn.member, True):
             self.broadcast(session)
@@ -28,6 +33,7 @@ class Hub:
             timer = self._timers.pop(session.code, None)
             if timer is not None:
                 timer.cancel()
+                log.info("host reconnected code=%s", session.code)
                 self.notify(session, {"kind": "host_reconnected"})
 
     def detach(self, session: Session, conn: Conn) -> None:
@@ -36,6 +42,7 @@ class Hub:
         if room.get(conn.member.member_id) is not conn:
             return  # already replaced; the newer socket owns presence
         del room[conn.member.member_id]
+        log.info("ws disconnected code=%s member=%s", session.code, conn.member.member_id)
         if self._sessions.get(session.code) is not session:
             return  # session ended
         if conn.member.member_id not in session.members:
@@ -43,6 +50,7 @@ class Hub:
         changed = session.set_connected(conn.member, False)
         if conn.member.role == "host":
             changed = session.pause_for_host_loss() or changed
+            log.warning("host disconnected code=%s grace=%ss", session.code, self._grace)
             self.notify(session, {"kind": "host_disconnected"})
             self._timers[session.code] = asyncio.create_task(self._expire_after_grace(session))
         if changed:
@@ -51,6 +59,7 @@ class Hub:
     async def kick(self, session: Session, member_id: str) -> None:
         conn = self._rooms.get(session.code, {}).pop(member_id, None)
         if conn is not None:
+            log.info("member kicked code=%s member=%s", session.code, member_id)
             await conn.close(4003)
 
     async def end_session(self, session: Session) -> None:
@@ -58,11 +67,14 @@ class Hub:
         timer = self._timers.pop(session.code, None)
         if timer is not None:
             timer.cancel()
-        for conn in list(self._rooms.pop(session.code, {}).values()):
+        conns = list(self._rooms.pop(session.code, {}).values())
+        log.info("closing session code=%s connections=%d", session.code, len(conns))
+        for conn in conns:
             await conn.close(4004)
 
     async def _expire_after_grace(self, session: Session) -> None:
         await asyncio.sleep(self._grace)
+        log.warning("host grace expired, ending session code=%s", session.code)
         self._timers.pop(session.code, None)
         await self.end_session(session)
 

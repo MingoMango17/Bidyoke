@@ -19,6 +19,7 @@ async def reap_idle(
     while True:
         await asyncio.sleep(interval)
         for session in sessions.idle(ttl):
+            log.info("ending idle session code=%s", session.code)
             try:
                 await end(session)
             except Exception:
