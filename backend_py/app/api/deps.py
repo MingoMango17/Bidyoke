@@ -1,9 +1,13 @@
+import logging
+
 from fastapi import Depends, Header, Request
 from starlette.requests import HTTPConnection
 
 from app.container import Container
 from app.core.session import Member, Session
 from app.errors import AppError
+
+log = logging.getLogger(__name__)
 
 
 def get_container(conn: HTTPConnection) -> Container:
@@ -17,6 +21,7 @@ def _rate_limited() -> AppError:
 def limit_join(request: Request, code: str, container: Container = Depends(get_container)) -> None:
     host = request.client.host if request.client else "unknown"
     if not container.join_limiter.allow(f"{host}:{code.upper()}"):
+        log.warning("join rate limited code=%s ip=%s", code, host)
         raise _rate_limited()
 
 
@@ -47,4 +52,5 @@ def limit_search(
     member: Member = Depends(require_member), container: Container = Depends(get_container)
 ) -> None:
     if not container.search_limiter.allow(member.member_id):
+        log.warning("search rate limited member=%s", member.member_id)
         raise _rate_limited()
