@@ -2,14 +2,17 @@ import { Link, useParams } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { useRejoin, useSessionInfo } from '../api/sessions'
 import { Card } from '../components/Layout'
+import { ConnectionBadge } from '../components/ConnectionBadge'
 import { JoinForm } from '../components/JoinForm'
 import { clearIdentity, loadIdentity, saveIdentity, type Identity } from '../lib/identity'
+import { useSession } from '../session/useSession'
 
 export function Guest() {
   const { code } = useParams({ from: '/s/$code' })
   const [identity, setIdentity] = useState(() => loadIdentity(code))
   const rejoin = useRejoin(code, identity?.token)
   const info = useSessionInfo(code)
+  const session = useSession(rejoin.isSuccess ? identity : undefined)
 
   function joined(next: Identity) {
     saveIdentity(next)
@@ -31,7 +34,14 @@ export function Guest() {
   if (identity && !rejoin.isError) {
     return (
       <Card title={`Session ${code}`}>
-        <p>You are in.</p>
+        <div className="flex flex-col gap-2">
+          <ConnectionBadge
+            status={session.status}
+            closeReason={session.closeReason}
+            onReconnect={session.reconnect}
+          />
+          {session.state && <p>{session.state.members.length} people in this session.</p>}
+        </div>
       </Card>
     )
   }
