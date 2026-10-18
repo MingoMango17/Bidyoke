@@ -1,6 +1,7 @@
 import logging
 
 from app import config
+from app.core.messages import ErrorCode, Source
 from app.core.song import Song, SourceUnavailable
 from app.errors import AppError
 from app.services.quota import QuotaBudget
@@ -9,7 +10,7 @@ from app.services.youtube import YouTubeSource
 
 log = logging.getLogger(__name__)
 
-KNOWN_SOURCES = ("youtube", "local")
+KNOWN_SOURCES = tuple(Source)
 
 
 class SongCatalog:
@@ -19,9 +20,9 @@ class SongCatalog:
     @classmethod
     def from_config(cls) -> "SongCatalog":
         sources: list[SongSource] = []
-        if config.FIXTURE_SONGS and "local" in config.SOURCES:
+        if config.FIXTURE_SONGS and Source.LOCAL in config.SOURCES:
             sources.append(FixtureSource())
-        if config.YOUTUBE_API_KEY and "youtube" in config.SOURCES:
+        if config.YOUTUBE_API_KEY and Source.YOUTUBE in config.SOURCES:
             budget = QuotaBudget(config.YOUTUBE_DAILY_BUDGET, config.QUOTA_FILE)
             sources.append(YouTubeSource(config.YOUTUBE_API_KEY, budget))
         return cls(sources)
@@ -30,9 +31,9 @@ class SongCatalog:
         if source is None:
             ids = [i for i in config.SOURCES if i in self._sources]
         elif source not in KNOWN_SOURCES or source not in config.SOURCES:
-            raise AppError(422, "invalid_query", "Unknown or disabled source.")
+            raise AppError(422, ErrorCode.INVALID_QUERY, "Unknown or disabled source.")
         elif source not in self._sources:
-            raise AppError(502, "source_unavailable", "That source is unavailable.")
+            raise AppError(502, ErrorCode.SOURCE_UNAVAILABLE, "That source is unavailable.")
         else:
             ids = [source]
         results: list[Song] = []
@@ -45,7 +46,7 @@ class SongCatalog:
                 continue
             queried.append(source_id)
         if ids and not queried:
-            raise AppError(502, "source_unavailable", "That source is unavailable.")
+            raise AppError(502, ErrorCode.SOURCE_UNAVAILABLE, "That source is unavailable.")
         return results[:limit], queried
 
     async def resolve(self, song_id: str) -> Song | None:

@@ -1,5 +1,6 @@
 from typing import Protocol
 
+from app.core.messages import Source
 from app.core.song import Song
 
 
@@ -14,13 +15,13 @@ class SongSource(Protocol):
 
 
 class FixtureSource:
-    id = "local"
+    id = Source.LOCAL
 
     def __init__(self) -> None:
         self._songs = {
             f"local:test-{n}": Song(
                 song_id=f"local:test-{n}",
-                source="local",
+                source=Source.LOCAL,
                 title=f"Test Song {n}",
                 artist="Test Artist",
                 thumbnail="https://example.com/cover.jpg",
@@ -45,7 +46,7 @@ class FixtureSource:
             return None
         slug = song_id.partition(":")[2]
         return {
-            "kind": "local",
+            "kind": Source.LOCAL,
             "audioUrl": f"/media/songs/{slug}/instrumental.mp3",
             "durationMs": song.duration_ms,
             "offsetMs": 0,

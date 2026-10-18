@@ -2,7 +2,7 @@ import asyncio
 import logging
 
 from app.core.manager import SessionManager
-from app.core.messages import ServerMessage
+from app.core.messages import NoticeKind, Role, ServerMessage
 from app.core.session import Session
 from app.realtime.conn import Conn
 
@@ -30,12 +30,12 @@ class Hub:
             self.broadcast(session)
         else:
             conn.send(self._state_msg(session))
-        if conn.member.role == "host":
+        if conn.member.role == Role.HOST:
             timer = self._timers.pop(session.code, None)
             if timer is not None:
                 timer.cancel()
                 log.info("host reconnected code=%s", session.code)
-                self.notify(session, {"kind": "host_reconnected"})
+                self.notify(session, {"kind": NoticeKind.HOST_RECONNECTED})
 
     def detach(self, session: Session, conn: Conn) -> None:
         conn.stop()
@@ -49,10 +49,10 @@ class Hub:
         if conn.member.member_id not in session.members:
             return  # kicked
         changed = session.set_connected(conn.member, False)
-        if conn.member.role == "host":
+        if conn.member.role == Role.HOST:
             changed = session.pause_for_host_loss() or changed
             log.warning("host disconnected code=%s grace=%ss", session.code, self._grace)
-            self.notify(session, {"kind": "host_disconnected"})
+            self.notify(session, {"kind": NoticeKind.HOST_DISCONNECTED})
             self._timers[session.code] = asyncio.create_task(self._expire_after_grace(session))
         if changed:
             self.broadcast(session)
@@ -92,7 +92,7 @@ class Hub:
     def fan_out_position(self, session: Session, payload: dict) -> None:
         msg = {"type": ServerMessage.PLAYER_POSITION, "payload": payload}
         for conn in list(self._rooms.get(session.code, {}).values()):
-            if conn.member.role != "host":
+            if conn.member.role != Role.HOST:
                 conn.send(msg)
 
     @staticmethod

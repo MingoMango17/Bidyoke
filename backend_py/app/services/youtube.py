@@ -3,6 +3,7 @@ import re
 
 import httpx
 
+from app.core.messages import Source
 from app.core.song import Song, SourceUnavailable
 from app.services.cache import TTLCache
 from app.services.quota import QuotaBudget
@@ -20,7 +21,7 @@ _DURATION = re.compile(r"^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$")
 
 
 class YouTubeSource:
-    id = "youtube"
+    id = Source.YOUTUBE
 
     def __init__(
         self,
@@ -65,7 +66,7 @@ class YouTubeSource:
         song = await self.resolve(song_id)
         if song is None:
             return None
-        return {"kind": "youtube", "videoId": song_id.partition(":")[2]}
+        return {"kind": Source.YOUTUBE, "videoId": song_id.partition(":")[2]}
 
     async def _videos(self, ids: list[str]) -> list[Song]:
         missing = [i for i in ids if self._songs.get(i) is None]
@@ -111,7 +112,7 @@ def _to_song(item: dict) -> Song:
     thumb = next((thumbs[k]["url"] for k in ("high", "medium", "default") if k in thumbs), "")
     return Song(
         song_id=f"youtube:{item['id']}",
-        source="youtube",
+        source=Source.YOUTUBE,
         title=snippet.get("title", ""),
         artist=None,
         thumbnail=thumb,

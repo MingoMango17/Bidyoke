@@ -2,7 +2,7 @@ import logging
 
 from fastapi import WebSocket
 
-from app.core.messages import ClientMessage, ServerMessage
+from app.core.messages import ClientMessage, ErrorCode, ServerMessage
 from app.core.session import CommandError, Member, Session
 from app.ratelimit import TokenBucket
 from app.realtime.conn import Conn
@@ -28,7 +28,7 @@ async def read_loop(ws: WebSocket, hub: Hub, session: Session, member: Member, c
             return
         text = event.get("text")
         if text is None:
-            conn.send(error_msg("bad_request", "Only text frames are supported."))
+            conn.send(error_msg(ErrorCode.BAD_REQUEST, "Only text frames are supported."))
             continue
         if len(text.encode()) > MAX_MESSAGE_BYTES:
             log.warning("ws message too big code=%s member=%s", session.code, member.member_id)
