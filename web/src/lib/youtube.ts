@@ -33,6 +33,12 @@ export function loadYouTubeApi(): Promise<typeof YT> {
 
 export const PLAYER_STATE_ENDED = 0
 
+export const PlaybackFailure = {
+  EmbedBlocked: 'embed_blocked',
+  Error: 'playback_error',
+  Unavailable: 'playback_unavailable',
+} as const
+
 export function errorReason(code: number): string {
-  return code === 101 || code === 150 ? 'embed_blocked' : 'playback_error'
+  return code === 101 || code === 150 ? PlaybackFailure.EmbedBlocked : PlaybackFailure.Error
 }

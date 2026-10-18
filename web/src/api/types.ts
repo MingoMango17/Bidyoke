@@ -1,4 +1,5 @@
-export type Role = 'host' | 'guest'
+export const Role = { Host: 'host', Guest: 'guest' } as const
+export type Role = (typeof Role)[keyof typeof Role]
 
 export interface CreateSessionResponse {
   code: string

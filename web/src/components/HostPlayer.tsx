@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { usePlayback } from '../api/songs'
 import type { Identity } from '../lib/identity'
-import { Command } from '../protocol'
+import { PlaybackFailure } from '../lib/youtube'
+import { Command, PlayerStatus, SongSource } from '../protocol'
 import type { SessionApi } from '../session/useSession'
 import { buttonClass, Card } from './Layout'
 import { YouTubePlayer } from './YouTubePlayer'
@@ -23,7 +24,7 @@ export function HostPlayer({ identity, session }: Props) {
   const { send } = session
 
   useEffect(() => {
-    if (itemId && playback.isError) send(Command.PlayerError, { itemId, reason: 'playback_unavailable' })
+    if (itemId && playback.isError) send(Command.PlayerError, { itemId, reason: PlaybackFailure.Unavailable })
   }, [itemId, playback.isError, send])
 
   if (!started) {
@@ -39,15 +40,15 @@ export function HostPlayer({ identity, session }: Props) {
     )
   }
 
-  const playing = state?.player.status === 'playing'
+  const playing = state?.player.status === PlayerStatus.Playing
   const info = playback.data?.playback
 
   let screen
   if (!item) {
     screen = <p className="p-6 text-zinc-400">Waiting for the first song…</p>
-  } else if (info?.kind === 'local') {
+  } else if (info?.kind === SongSource.Local) {
     screen = <p className="p-6 text-zinc-400">Library songs can't be played here yet.</p>
-  } else if (info?.kind === 'youtube') {
+  } else if (info?.kind === SongSource.YouTube) {
     screen = (
       <YouTubePlayer
         videoId={info.videoId}

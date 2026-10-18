@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { normalizeCode, useJoinSession } from '../api/sessions'
+import { Role } from '../api/types'
 import type { Identity } from '../lib/identity'
 import { buttonClass, ErrorText, inputClass } from './Layout'
 
@@ -20,7 +21,7 @@ export function JoinForm({ fixedCode, onJoined }: Props) {
       { code: normalized, name },
       {
         onSuccess: (res) =>
-          onJoined({ code: normalized, memberId: res.memberId, token: res.token, role: 'guest' }),
+          onJoined({ code: normalized, memberId: res.memberId, token: res.token, role: Role.Guest }),
       },
     )
   }

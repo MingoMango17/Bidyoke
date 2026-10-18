@@ -1,5 +1,7 @@
 const API_URL: string = import.meta.env.VITE_API_URL ?? ''
 
+export const ApiErrorCode = { NetworkError: 'network_error', Unknown: 'unknown' } as const
+
 export class ApiError extends Error {
   status: number
   code: string
@@ -30,14 +32,14 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
     })
   } catch {
-    throw new ApiError(0, 'network_error', 'Cannot reach the server.')
+    throw new ApiError(0, ApiErrorCode.NetworkError, 'Cannot reach the server.')
   }
 
   if (!response.ok) {
     const payload = await response.json().catch(() => null)
     throw new ApiError(
       response.status,
-      payload?.error?.code ?? 'unknown',
+      payload?.error?.code ?? ApiErrorCode.Unknown,
       payload?.error?.message ?? 'Something went wrong.',
     )
   }

@@ -9,9 +9,28 @@ import {
   type SessionState,
 } from '../protocol'
 
-export type ConnectionStatus = 'connecting' | 'open' | 'reconnecting' | 'closed'
-export type CloseReason = 'invalid_token' | 'ended' | 'kicked' | 'replaced'
-export type IdentityCheck = 'ok' | 'invalid_token' | 'ended'
+export const ConnectionStatus = {
+  Connecting: 'connecting',
+  Open: 'open',
+  Reconnecting: 'reconnecting',
+  Closed: 'closed',
+} as const
+export type ConnectionStatus = (typeof ConnectionStatus)[keyof typeof ConnectionStatus]
+
+export const CloseReason = {
+  InvalidToken: 'invalid_token',
+  Ended: 'ended',
+  Kicked: 'kicked',
+  Replaced: 'replaced',
+} as const
+export type CloseReason = (typeof CloseReason)[keyof typeof CloseReason]
+
+export const IdentityCheck = {
+  Ok: 'ok',
+  InvalidToken: CloseReason.InvalidToken,
+  Ended: CloseReason.Ended,
+} as const
+export type IdentityCheck = (typeof IdentityCheck)[keyof typeof IdentityCheck]
 
 export interface SocketHandlers {
   onStatus: (status: ConnectionStatus, reason?: CloseReason) => void
@@ -35,10 +54,10 @@ const PING_INTERVAL_MS = 25_000
 
 // 4009 is terminal on purpose: two tabs for one member would otherwise kick each other forever.
 const TERMINAL_CLOSE: Record<number, CloseReason> = {
-  4001: 'invalid_token',
-  4003: 'kicked',
-  4004: 'ended',
-  4009: 'replaced',
+  4001: CloseReason.InvalidToken,
+  4003: CloseReason.Kicked,
+  4004: CloseReason.Ended,
+  4009: CloseReason.Replaced,
 }
 
 export function backoffDelay(attempt: number, random: number): number {
@@ -64,7 +83,7 @@ export class SessionSocket {
     this.clear()
     this.stopped = false
     this.attempt = 0
-    this.connect('connecting')
+    this.connect(ConnectionStatus.Connecting)
   }
 
   stop(): void {
@@ -90,7 +109,7 @@ export class SessionSocket {
     ws.onopen = () => {
       if (this.ws !== ws) return
       opened = true
-      this.options.handlers.onStatus('open')
+      this.options.handlers.onStatus(ConnectionStatus.Open)
       this.pingTimer = setInterval(() => {
         if (ws.readyState === OPEN) ws.send(JSON.stringify({ type: ClientMessage.Ping }))
       }, PING_INTERVAL_MS)
@@ -104,7 +123,7 @@ export class SessionSocket {
       this.stopPing()
       if (this.stopped) return
       const reason = TERMINAL_CLOSE[event.code]
-      if (reason) this.options.handlers.onStatus('closed', reason)
+      if (reason) this.options.handlers.onStatus(ConnectionStatus.Closed, reason)
       else if (opened) this.scheduleReconnect()
       else void this.checkThenRetry()
     }
@@ -137,18 +156,18 @@ export class SessionSocket {
   }
 
   private async checkThenRetry(): Promise<void> {
-    this.options.handlers.onStatus('reconnecting')
+    this.options.handlers.onStatus(ConnectionStatus.Reconnecting)
     const result = await this.options.checkIdentity()
     if (this.stopped) return
-    if (result === 'ok') this.scheduleReconnect()
-    else this.options.handlers.onStatus('closed', result)
+    if (result === IdentityCheck.Ok) this.scheduleReconnect()
+    else this.options.handlers.onStatus(ConnectionStatus.Closed, result)
   }
 
   private scheduleReconnect(): void {
-    this.options.handlers.onStatus('reconnecting')
+    this.options.handlers.onStatus(ConnectionStatus.Reconnecting)
     const random = this.options.random ?? Math.random
     const delay = backoffDelay(this.attempt++, random())
-    this.retryTimer = setTimeout(() => this.connect('reconnecting'), delay)
+    this.retryTimer = setTimeout(() => this.connect(ConnectionStatus.Reconnecting), delay)
   }
 
   private stopPing(): void {

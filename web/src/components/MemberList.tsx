@@ -1,3 +1,4 @@
+import { Role } from '../api/types'
 import { Command, type SessionState } from '../protocol'
 import type { SessionApi } from '../session/useSession'
 import { Card } from './Layout'
@@ -21,9 +22,9 @@ export function MemberList({ state, send }: Props) {
           <li key={m.memberId} className="flex items-center justify-between gap-2">
             <span className={m.connected ? '' : 'text-zinc-400'}>
               {m.name}
-              {m.role === 'host' && ' (host)'}
+              {m.role === Role.Host && ' (host)'}
             </span>
-            {m.role !== 'host' && (
+            {m.role !== Role.Host && (
               <button
                 className="text-red-600 dark:text-red-400"
                 onClick={() => send(Command.SessionKick, { memberId: m.memberId })}

@@ -1,6 +1,7 @@
 import { useConfig } from '../api/songs'
 import { Command } from '../protocol'
 import type { Identity } from '../lib/identity'
+import { ConnectionStatus } from '../session/socket'
 import type { SessionApi } from '../session/useSession'
 import { ConnectionBadge } from './ConnectionBadge'
 import { QueueList } from './QueueList'
@@ -42,7 +43,7 @@ export function GuestSession({ identity, session }: Props) {
               token={identity.token}
               sources={config.data.sources}
               queuedIds={queuedIds}
-              canAdd={session.status === 'open' && !atCap}
+              canAdd={session.status === ConnectionStatus.Open && !atCap}
               onAdd={(song) => session.send(Command.QueueAdd, { songId: song.songId })}
             />
           )}

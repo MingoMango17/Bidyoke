@@ -1,8 +1,23 @@
 import type { Role } from './api/types'
 
+export const SongSource = { YouTube: 'youtube', Local: 'local' } as const
+export type SongSource = (typeof SongSource)[keyof typeof SongSource]
+
+export const PlayerStatus = { Idle: 'idle', Playing: 'playing', Paused: 'paused' } as const
+export type PlayerStatus = (typeof PlayerStatus)[keyof typeof PlayerStatus]
+
+export const NoticeKind = {
+  SongSkipped: 'song_skipped',
+  HostDisconnected: 'host_disconnected',
+  HostReconnected: 'host_reconnected',
+  SessionLocked: 'session_locked',
+  MemberKicked: 'member_kicked',
+} as const
+export type NoticeKind = (typeof NoticeKind)[keyof typeof NoticeKind]
+
 export interface Song {
   songId: string
-  source: 'youtube' | 'local'
+  source: SongSource
   title: string
   artist: string | null
   thumbnail: string
@@ -25,7 +40,7 @@ export interface Member {
 }
 
 export interface PlayerState {
-  status: 'idle' | 'playing' | 'paused'
+  status: PlayerStatus
   positionMs: number
   updatedAt: string
 }
@@ -48,13 +63,6 @@ export interface SessionState {
   scores: Score[]
   settings: { maxQueuePerMember: number; locked: boolean }
 }
-
-export type NoticeKind =
-  | 'song_skipped'
-  | 'host_disconnected'
-  | 'host_reconnected'
-  | 'session_locked'
-  | 'member_kicked'
 
 export interface Notice {
   kind: NoticeKind

@@ -1,4 +1,4 @@
-import type { SessionState } from '../protocol'
+import { PlayerStatus, type SessionState } from '../protocol'
 import { Card } from './Layout'
 import { SongRow } from './SongRow'
 
@@ -18,7 +18,7 @@ export function QueueList({ state, memberId, onRemove }: Props) {
           <ul>
             <SongRow
               song={state.nowPlaying.song}
-              note={`${nameOf(state.nowPlaying.addedBy)}${state.player.status === 'paused' ? ' · paused' : ''}`}
+              note={`${nameOf(state.nowPlaying.addedBy)}${state.player.status === PlayerStatus.Paused ? ' · paused' : ''}`}
             />
           </ul>
         ) : (

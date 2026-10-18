@@ -1,11 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
-import type { Song } from '../protocol'
+import type { Song, SongSource } from '../protocol'
 import { api } from './client'
 import type { AppConfig } from './types'
 
 export type PlaybackInfo =
-  | { kind: 'youtube'; videoId: string }
-  | { kind: 'local'; audioUrl: string; durationMs: number }
+  | { kind: typeof SongSource.YouTube; videoId: string }
+  | { kind: typeof SongSource.Local; audioUrl: string; durationMs: number }
 
 interface SearchResponse {
   results: Song[]

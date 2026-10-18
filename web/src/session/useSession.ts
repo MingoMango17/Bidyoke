@@ -11,9 +11,9 @@ import type {
 } from '../protocol'
 import {
   SessionSocket,
+  ConnectionStatus,
+  IdentityCheck,
   type CloseReason,
-  type ConnectionStatus,
-  type IdentityCheck,
 } from './socket'
 
 const WS_URL: string | undefined = import.meta.env.VITE_WS_URL
@@ -26,13 +26,13 @@ function socketUrl(code: string, token: string): string {
 async function checkIdentity(code: string, token: string): Promise<IdentityCheck> {
   try {
     await api<RejoinResponse>(`/api/sessions/${code}/rejoin`, { method: 'POST', token })
-    return 'ok'
+    return IdentityCheck.Ok
   } catch (error) {
     if (error instanceof ApiError) {
-      if (error.status === 401) return 'invalid_token'
-      if (error.status === 404) return 'ended'
+      if (error.status === 401) return IdentityCheck.InvalidToken
+      if (error.status === 404) return IdentityCheck.Ended
     }
-    return 'ok'
+    return IdentityCheck.Ok
   }
 }
 
@@ -43,7 +43,7 @@ export function useSession(identity: Identity | undefined) {
   const token = identity?.token
   const socketRef = useRef<SessionSocket>(null)
   const [generation, setGeneration] = useState(0)
-  const [status, setStatus] = useState<ConnectionStatus>('connecting')
+  const [status, setStatus] = useState<ConnectionStatus>(ConnectionStatus.Connecting)
   const [closeReason, setCloseReason] = useState<CloseReason>()
   const [state, setState] = useState<SessionState>()
   const [lastError, setLastError] = useState<ServerError>()

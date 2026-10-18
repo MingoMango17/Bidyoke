@@ -1,4 +1,5 @@
 import { useNavigate } from '@tanstack/react-router'
+import { Role } from '../api/types'
 import { useCreateSession } from '../api/sessions'
 import { buttonClass, Card, ErrorText } from '../components/Layout'
 import { JoinForm } from '../components/JoinForm'
@@ -11,7 +12,7 @@ export function Landing() {
   function host() {
     create.mutate(undefined, {
       onSuccess: (res) => {
-        saveIdentity({ code: res.code, memberId: res.memberId, token: res.token, role: 'host' })
+        saveIdentity({ code: res.code, memberId: res.memberId, token: res.token, role: Role.Host })
         void navigate({ to: '/host/$code', params: { code: res.code } })
       },
     })

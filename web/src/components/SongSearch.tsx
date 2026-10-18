@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useSongSearch } from '../api/songs'
-import type { Song } from '../protocol'
+import { SongSource, type Song } from '../protocol'
 import { buttonClass, Card, ErrorText, inputClass } from './Layout'
 import { SongRow } from './SongRow'
 
@@ -15,7 +15,7 @@ interface Props {
 const SOURCE_LABELS: Record<string, string> = { youtube: 'YouTube', local: 'Library' }
 
 export function SongSearch({ token, sources, queuedIds, canAdd, onAdd }: Props) {
-  const [source, setSource] = useState(sources[0] ?? 'youtube')
+  const [source, setSource] = useState(sources[0] ?? SongSource.YouTube)
   const [input, setInput] = useState('')
   const [query, setQuery] = useState('')
   const search = useSongSearch(token, query, source)

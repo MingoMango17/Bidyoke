@@ -1,4 +1,5 @@
 import { Link, useParams } from '@tanstack/react-router'
+import { Role } from '../api/types'
 import { Card } from '../components/Layout'
 import { ConnectionBadge } from '../components/ConnectionBadge'
 import { HostPlayer } from '../components/HostPlayer'
@@ -12,7 +13,7 @@ import { useSession } from '../session/useSession'
 export function Host() {
   const { code } = useParams({ from: '/host/$code' })
   const identity = loadIdentity(code)
-  const isHost = identity?.role === 'host'
+  const isHost = identity?.role === Role.Host
   const session = useSession(isHost ? identity : undefined)
 
   if (!isHost) {

@@ -1,18 +1,19 @@
-import type { Notice } from '../protocol'
+import { NoticeKind, type Notice } from '../protocol'
+import { PlaybackFailure } from './youtube'
 
 export function noticeText(notice: Notice): string | undefined {
   switch (notice.kind) {
-    case 'song_skipped':
-      return notice.reason === 'embed_blocked'
+    case NoticeKind.SongSkipped:
+      return notice.reason === PlaybackFailure.EmbedBlocked
         ? 'A song was skipped because it cannot be played here.'
         : 'A song was skipped.'
-    case 'host_disconnected':
+    case NoticeKind.HostDisconnected:
       return 'The host disconnected. Playback is paused.'
-    case 'host_reconnected':
+    case NoticeKind.HostReconnected:
       return 'The host is back.'
-    case 'session_locked':
+    case NoticeKind.SessionLocked:
       return 'The session no longer accepts new members.'
-    case 'member_kicked':
+    case NoticeKind.MemberKicked:
       return 'A member was removed from the session.'
     default:
       return undefined
