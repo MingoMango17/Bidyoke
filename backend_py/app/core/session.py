@@ -5,13 +5,10 @@ import secrets
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Literal
 
 from app import config
-from app.core.messages import Command
+from app.core.messages import Command, ErrorCode, NoticeKind, PlayerStatus, Role
 from app.core.song import Resolver, Song, SourceUnavailable
-
-Role = Literal["host", "guest"]
 
 POSITION_FANOUT_INTERVAL = 1.0
 
@@ -82,7 +79,7 @@ class Session:
     members: dict[str, Member] = field(default_factory=dict)  # keyed by memberId
     queue: list[QueueItem] = field(default_factory=list)
     now_playing: QueueItem | None = None
-    player_status: Literal["idle", "playing", "paused"] = "idle"
+    player_status: PlayerStatus = PlayerStatus.IDLE
     player_updated_at: datetime = field(default_factory=_now)
     player_position_ms: int = 0
     history: list[QueueItem] = field(default_factory=list)
@@ -122,10 +119,10 @@ class Session:
             return Result(self._skip_current())
         if type_ == Command.PLAYER_PAUSE:
             self._require_host(member)
-            return Result(self._set_status("playing", "paused"))
+            return Result(self._set_status(PlayerStatus.PLAYING, PlayerStatus.PAUSED))
         if type_ == Command.PLAYER_RESUME:
             self._require_host(member)
-            return Result(self._set_status("paused", "playing"))
+            return Result(self._set_status(PlayerStatus.PAUSED, PlayerStatus.PLAYING))
         if type_ == Command.PLAYER_ENDED:
             self._require_host(member)
             return Result(self._finish_current(payload))
@@ -143,13 +140,13 @@ class Session:
             return Result(ended=True)
         if type_ == Command.SCORE_SUBMIT:
             return Result(self._submit_score(member, payload))
-        raise CommandError("unknown_type", f"Unknown message type: {type_}")
+        raise CommandError(ErrorCode.UNKNOWN_TYPE, f"Unknown message type: {type_}")
 
     def _lock(self, member: Member, payload: dict) -> bool:
         self._require_host(member)
         locked = payload.get("locked")
         if not isinstance(locked, bool):
-            raise CommandError("invalid_payload", "`locked` must be a boolean.")
+            raise CommandError(ErrorCode.INVALID_PAYLOAD, "`locked` must be a boolean.")
         if locked == self.locked:
             return False
         self.locked = locked
@@ -162,7 +159,7 @@ class Session:
         self._advance()
         return True
 
-    def _set_status(self, expected: str, new: Literal["playing", "paused"]) -> bool:
+    def _set_status(self, expected: PlayerStatus, new: PlayerStatus) -> bool:
         if self.now_playing is None or self.player_status != expected:
             return False
         self.player_status = new
@@ -179,12 +176,12 @@ class Session:
     def _fail_current(self, payload: dict) -> Result:
         reason = payload.get("reason")
         if not isinstance(reason, str):
-            raise CommandError("invalid_payload", "`reason` must be a string.")
+            raise CommandError(ErrorCode.INVALID_PAYLOAD, "`reason` must be a string.")
         skipped = self.now_playing
         if not self._is_current(payload) or skipped is None:
             return Result()
         self._advance()
-        notice = {"kind": "song_skipped", "itemId": skipped.item_id, "reason": reason}
+        notice = {"kind": NoticeKind.SONG_SKIPPED, "itemId": skipped.item_id, "reason": reason}
         return Result(True, (notice,))
 
     def _report_position(self, payload: dict) -> Result:
@@ -192,8 +189,8 @@ class Session:
             return Result()
         position = payload.get("positionMs")
         if not isinstance(position, int) or isinstance(position, bool) or position < 0:
-            raise CommandError("invalid_payload", "`positionMs` must be a non-negative integer.")
-        if self.player_status != "playing":
+            raise CommandError(ErrorCode.INVALID_PAYLOAD, "`positionMs` must be a non-negative integer.")
+        if self.player_status != PlayerStatus.PLAYING:
             return Result()
         self.player_position_ms = position
         now = time.monotonic()
@@ -211,19 +208,19 @@ class Session:
     def _submit_score(self, member: Member, payload: dict) -> bool:
         item_id = payload.get("itemId")
         if not isinstance(item_id, str):
-            raise CommandError("invalid_payload", "`itemId` must be a string.")
+            raise CommandError(ErrorCode.INVALID_PAYLOAD, "`itemId` must be a string.")
         sung = [i for i in (*self.history, self.now_playing) if i is not None]
         item = next((i for i in sung if i.item_id == item_id), None)
         if item is None:
-            raise CommandError("invalid_payload", "No played item with that id.")
+            raise CommandError(ErrorCode.INVALID_PAYLOAD, "No played item with that id.")
         if item.added_by != member.member_id:
-            raise CommandError("forbidden", "Only the singer can submit a score.")
+            raise CommandError(ErrorCode.FORBIDDEN, "Only the singer can submit a score.")
         score = payload.get("score")
         if isinstance(score, bool) or not isinstance(score, (int, float)) or not 0 <= score <= 100:
-            raise CommandError("invalid_payload", "`score` must be a number from 0 to 100.")
+            raise CommandError(ErrorCode.INVALID_PAYLOAD, "`score` must be a number from 0 to 100.")
         breakdown = payload.get("breakdown", {})
         if not isinstance(breakdown, dict):
-            raise CommandError("invalid_payload", "`breakdown` must be an object.")
+            raise CommandError(ErrorCode.INVALID_PAYLOAD, "`breakdown` must be an object.")
         self.scores = [x for x in self.scores if x["itemId"] != item_id]
         self.scores.append(
             {"itemId": item_id, "memberId": member.member_id, "score": score, "breakdown": breakdown}
@@ -234,24 +231,24 @@ class Session:
     def _kick(self, payload: dict) -> Result:
         member_id = payload.get("memberId")
         if not isinstance(member_id, str):
-            raise CommandError("invalid_payload", "`memberId` must be a string.")
+            raise CommandError(ErrorCode.INVALID_PAYLOAD, "`memberId` must be a string.")
         target = self.members.get(member_id)
         if target is None:
-            raise CommandError("invalid_payload", "No member with that id.")
-        if target.role == "host":
-            raise CommandError("invalid_payload", "The host cannot be kicked.")
+            raise CommandError(ErrorCode.INVALID_PAYLOAD, "No member with that id.")
+        if target.role == Role.HOST:
+            raise CommandError(ErrorCode.INVALID_PAYLOAD, "The host cannot be kicked.")
         del self.members[member_id]
         self.touch()
-        notice = {"kind": "member_kicked", "memberId": member_id}
+        notice = {"kind": NoticeKind.MEMBER_KICKED, "memberId": member_id}
         return Result(True, (notice,), kicked=member_id)
 
     def pause_for_host_loss(self) -> bool:
-        return self._set_status("playing", "paused")
+        return self._set_status(PlayerStatus.PLAYING, PlayerStatus.PAUSED)
 
     def _is_current(self, payload: dict) -> bool:
         item_id = payload.get("itemId")
         if not isinstance(item_id, str):
-            raise CommandError("invalid_payload", "`itemId` must be a string.")
+            raise CommandError(ErrorCode.INVALID_PAYLOAD, "`itemId` must be a string.")
         return self.now_playing is not None and self.now_playing.item_id == item_id
 
     def _advance(self) -> None:
@@ -260,36 +257,36 @@ class Session:
         self.player_position_ms = 0
         if self.queue:
             self.now_playing = self.queue.pop(0)
-            self.player_status = "playing"
+            self.player_status = PlayerStatus.PLAYING
         else:
             self.now_playing = None
-            self.player_status = "idle"
+            self.player_status = PlayerStatus.IDLE
         self.player_updated_at = _now()
         self.touch()
 
     async def _queue_add(self, member: Member, payload: dict) -> bool:
         song_id = payload.get("songId")
         if not isinstance(song_id, str) or not song_id:
-            raise CommandError("invalid_payload", "`songId` must be a non-empty string.")
+            raise CommandError(ErrorCode.INVALID_PAYLOAD, "`songId` must be a non-empty string.")
         try:
             song = await self.resolve(song_id)
         except SourceUnavailable:
-            raise CommandError("source_unavailable", "That source is unavailable.")
+            raise CommandError(ErrorCode.SOURCE_UNAVAILABLE, "That source is unavailable.")
         if song is None:
-            raise CommandError("song_not_found", "No song with that id.")
+            raise CommandError(ErrorCode.SONG_NOT_FOUND, "No song with that id.")
         mine = [i for i in self.queue if i.added_by == member.member_id]
         if any(i.song.song_id == song_id for i in mine):
-            raise CommandError("already_queued", "You already queued that song.")
+            raise CommandError(ErrorCode.ALREADY_QUEUED, "You already queued that song.")
         if len(mine) >= config.MAX_QUEUE_PER_MEMBER:
             raise CommandError(
-                "queue_full", f"You already have {config.MAX_QUEUE_PER_MEMBER} songs queued."
+                ErrorCode.QUEUE_FULL, f"You already have {config.MAX_QUEUE_PER_MEMBER} songs queued."
             )
         if len(self.queue) >= config.MAX_QUEUE_TOTAL:
-            raise CommandError("queue_full", "The queue is full.")
+            raise CommandError(ErrorCode.QUEUE_FULL, "The queue is full.")
         item = QueueItem("q_" + secrets.token_hex(4), song, member.member_id, _now())
         if self.now_playing is None:
             self.now_playing = item
-            self.player_status = "playing"
+            self.player_status = PlayerStatus.PLAYING
             self.player_updated_at = item.added_at
         else:
             self.queue.append(item)
@@ -298,8 +295,8 @@ class Session:
 
     def _queue_remove(self, member: Member, payload: dict) -> bool:
         item = self._queued_item(payload)
-        if member.role != "host" and item.added_by != member.member_id:
-            raise CommandError("forbidden", "Only the owner or host can remove that.")
+        if member.role != Role.HOST and item.added_by != member.member_id:
+            raise CommandError(ErrorCode.FORBIDDEN, "Only the owner or host can remove that.")
         self.queue.remove(item)
         self.touch()
         return True
@@ -309,7 +306,7 @@ class Session:
         item = self._queued_item(payload)
         to_index = payload.get("toIndex")
         if not isinstance(to_index, int) or isinstance(to_index, bool):
-            raise CommandError("invalid_payload", "`toIndex` must be an integer.")
+            raise CommandError(ErrorCode.INVALID_PAYLOAD, "`toIndex` must be an integer.")
         to_index = max(0, min(to_index, len(self.queue) - 1))
         if self.queue.index(item) == to_index:
             return False
@@ -321,11 +318,11 @@ class Session:
     def _queued_item(self, payload: dict) -> QueueItem:
         item_id = payload.get("itemId")
         if not isinstance(item_id, str):
-            raise CommandError("invalid_payload", "`itemId` must be a string.")
+            raise CommandError(ErrorCode.INVALID_PAYLOAD, "`itemId` must be a string.")
         for item in self.queue:
             if item.item_id == item_id:
                 return item
-        raise CommandError("invalid_payload", "No queued item with that id.")
+        raise CommandError(ErrorCode.INVALID_PAYLOAD, "No queued item with that id.")
 
     def snapshot(self) -> dict:
         return {
@@ -352,5 +349,5 @@ class Session:
 
     @staticmethod
     def _require_host(member: Member) -> None:
-        if member.role != "host":
-            raise CommandError("forbidden", "Only the host can do that.")
+        if member.role != Role.HOST:
+            raise CommandError(ErrorCode.FORBIDDEN, "Only the host can do that.")

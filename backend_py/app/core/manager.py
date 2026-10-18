@@ -5,7 +5,8 @@ import logging
 import secrets
 import time
 
-from app.core.session import Member, Role, Session
+from app.core.messages import Role
+from app.core.session import Member, Session
 from app.core.song import Resolver
 
 log = logging.getLogger(__name__)
@@ -42,7 +43,7 @@ class SessionManager:
         session = Session(code=code, resolve=self._resolve)
         self._sessions[code] = session
         log.info("session created code=%s", code)
-        host = self.add_member(session, host_name, "host")
+        host = self.add_member(session, host_name, Role.HOST)
         return session, host
 
     def add_member(self, session: Session, name: str, role: Role) -> Member:
