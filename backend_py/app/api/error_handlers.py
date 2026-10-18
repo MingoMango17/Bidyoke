@@ -4,6 +4,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
+from app.core.messages import ErrorCode
 from app.errors import AppError
 
 log = logging.getLogger(__name__)
@@ -23,4 +24,4 @@ def install(app: FastAPI) -> None:
     @app.exception_handler(RequestValidationError)
     async def _validation_error(request: Request, exc: RequestValidationError):
         log.info("%s %s -> 422 invalid_payload", request.method, request.url.path)
-        return JSONResponse(_body("invalid_payload", "Invalid request."), status_code=422)
+        return JSONResponse(_body(ErrorCode.INVALID_PAYLOAD, "Invalid request."), status_code=422)

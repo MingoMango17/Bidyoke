@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, WebSocket
 
 from app.api.deps import get_container
 from app.container import Container
+from app.core.messages import ErrorCode
 from app.realtime.conn import Conn
 from app.realtime.handshake import deny, origin_allowed
 from app.realtime.loop import read_loop
@@ -15,12 +16,12 @@ async def session_socket(
 ):
     session = container.sessions.get(code)
     if session is None:
-        return await deny(ws, 404, "session_not_found", "No session with that code.")
+        return await deny(ws, 404, ErrorCode.SESSION_NOT_FOUND, "No session with that code.")
     member = session.member_by_token(ws.query_params.get("token", ""))
     if member is None:
-        return await deny(ws, 401, "invalid_token", "Missing or invalid token.")
+        return await deny(ws, 401, ErrorCode.INVALID_TOKEN, "Missing or invalid token.")
     if not origin_allowed(ws):
-        return await deny(ws, 403, "forbidden", "Origin not allowed.")
+        return await deny(ws, 403, ErrorCode.FORBIDDEN, "Origin not allowed.")
 
     await ws.accept()
     hub = container.hub

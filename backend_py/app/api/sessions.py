@@ -4,6 +4,7 @@ from app import config
 from app.api.deps import bearer_token, get_container, limit_join, require_session
 from app.api.schemas import JoinBody
 from app.container import Container
+from app.core.messages import ErrorCode, Role
 from app.core.session import Session
 from app.core.validation import clean_name
 from app.errors import AppError
@@ -34,10 +35,10 @@ async def join_session(
     container: Container = Depends(get_container),
 ):
     if session.locked:
-        raise AppError(403, "session_locked", "This session is not accepting new members.")
+        raise AppError(403, ErrorCode.SESSION_LOCKED, "This session is not accepting new members.")
     if len(session.members) >= config.MAX_MEMBERS:
-        raise AppError(403, "session_full", "This session is full.")
-    guest = container.sessions.add_member(session, clean_name(body.name), "guest")
+        raise AppError(403, ErrorCode.SESSION_FULL, "This session is full.")
+    guest = container.sessions.add_member(session, clean_name(body.name), Role.GUEST)
     container.hub.broadcast(session)
     return {"memberId": guest.member_id, "token": guest.token}
 
@@ -48,5 +49,5 @@ async def rejoin_session(
 ):
     member = session.member_by_token(token)
     if member is None:
-        raise AppError(401, "invalid_token", "Missing or invalid token.")
+        raise AppError(401, ErrorCode.INVALID_TOKEN, "Missing or invalid token.")
     return {"memberId": member.member_id, "role": member.role}
