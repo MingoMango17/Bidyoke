@@ -1,4 +1,4 @@
-import type { SessionState } from '../protocol'
+import { Command, type SessionState } from '../protocol'
 import type { SessionApi } from '../session/useSession'
 import { Card } from './Layout'
 
@@ -11,7 +11,7 @@ export function MemberList({ state, send }: Props) {
   const { locked } = state.settings
 
   function end() {
-    if (window.confirm('End the session for everyone?')) send('session.end')
+    if (window.confirm('End the session for everyone?')) send(Command.SessionEnd)
   }
 
   return (
@@ -26,7 +26,7 @@ export function MemberList({ state, send }: Props) {
             {m.role !== 'host' && (
               <button
                 className="text-red-600 dark:text-red-400"
-                onClick={() => send('session.kick', { memberId: m.memberId })}
+                onClick={() => send(Command.SessionKick, { memberId: m.memberId })}
               >
                 Kick
               </button>
@@ -37,7 +37,7 @@ export function MemberList({ state, send }: Props) {
       <div className="mt-4 flex gap-2 text-sm">
         <button
           className="rounded border border-zinc-300 px-3 py-1 dark:border-zinc-700"
-          onClick={() => send('session.lock', { locked: !locked })}
+          onClick={() => send(Command.SessionLock, { locked: !locked })}
         >
           {locked ? 'Unlock joining' : 'Lock joining'}
         </button>

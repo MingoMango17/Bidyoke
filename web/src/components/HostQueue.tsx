@@ -1,4 +1,4 @@
-import type { SessionState } from '../protocol'
+import { Command, type SessionState } from '../protocol'
 import type { SessionApi } from '../session/useSession'
 import { Card } from './Layout'
 import { SongRow } from './SongRow'
@@ -31,7 +31,7 @@ export function HostQueue({ state, send }: Props) {
                     aria-label="Move up"
                     className={smallButton}
                     disabled={index === 0}
-                    onClick={() => send('queue.move', { itemId: item.itemId, toIndex: index - 1 })}
+                    onClick={() => send(Command.QueueMove, { itemId: item.itemId, toIndex: index - 1 })}
                   >
                     ↑
                   </button>
@@ -39,14 +39,14 @@ export function HostQueue({ state, send }: Props) {
                     aria-label="Move down"
                     className={smallButton}
                     disabled={index === last}
-                    onClick={() => send('queue.move', { itemId: item.itemId, toIndex: index + 1 })}
+                    onClick={() => send(Command.QueueMove, { itemId: item.itemId, toIndex: index + 1 })}
                   >
                     ↓
                   </button>
                   <button
                     aria-label="Remove"
                     className={`${smallButton} text-red-600 dark:text-red-400`}
-                    onClick={() => send('queue.remove', { itemId: item.itemId })}
+                    onClick={() => send(Command.QueueRemove, { itemId: item.itemId })}
                   >
                     ×
                   </button>

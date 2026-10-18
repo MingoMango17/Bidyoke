@@ -1,10 +1,12 @@
-import type {
-  CommandArgs,
-  CommandType,
-  Notice,
-  ServerError,
-  ServerMessage,
-  SessionState,
+import {
+  ClientMessage,
+  ServerMessageType,
+  type CommandArgs,
+  type CommandType,
+  type Notice,
+  type ServerError,
+  type ServerMessage,
+  type SessionState,
 } from '../protocol'
 
 export type ConnectionStatus = 'connecting' | 'open' | 'reconnecting' | 'closed'
@@ -90,7 +92,7 @@ export class SessionSocket {
       opened = true
       this.options.handlers.onStatus('open')
       this.pingTimer = setInterval(() => {
-        if (ws.readyState === OPEN) ws.send(JSON.stringify({ type: 'ping' }))
+        if (ws.readyState === OPEN) ws.send(JSON.stringify({ type: ClientMessage.Ping }))
       }, PING_INTERVAL_MS)
     }
     ws.onmessage = (event) => {
@@ -117,16 +119,16 @@ export class SessionSocket {
     }
     const { handlers } = this.options
     switch (message.type) {
-      case 'state':
+      case ServerMessageType.State:
         if (message.payload.rev <= this.lastRev) return
         this.lastRev = message.payload.rev
         this.attempt = 0
         handlers.onState(message.payload)
         return
-      case 'error':
+      case ServerMessageType.Error:
         handlers.onError(message.payload)
         return
-      case 'notice':
+      case ServerMessageType.Notice:
         handlers.onNotice(message.payload)
         return
       default:

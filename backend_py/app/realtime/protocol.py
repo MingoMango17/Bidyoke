@@ -1,5 +1,7 @@
 import json
 
+from app.core.messages import ServerMessage
+
 MAX_MESSAGE_BYTES = 16 * 1024
 
 
@@ -14,7 +16,7 @@ def error_msg(code: str, message: str, id_: str | None = None) -> dict:
     payload = {"code": code, "message": message}
     if id_ is not None:
         payload["id"] = id_
-    return {"type": "error", "payload": payload}
+    return {"type": ServerMessage.ERROR, "payload": payload}
 
 
 def parse_frame(text: str) -> tuple[str, dict, str | None]:

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { usePlayback } from '../api/songs'
 import type { Identity } from '../lib/identity'
+import { Command } from '../protocol'
 import type { SessionApi } from '../session/useSession'
 import { buttonClass, Card } from './Layout'
 import { YouTubePlayer } from './YouTubePlayer'
@@ -22,7 +23,7 @@ export function HostPlayer({ identity, session }: Props) {
   const { send } = session
 
   useEffect(() => {
-    if (itemId && playback.isError) send('player.error', { itemId, reason: 'playback_unavailable' })
+    if (itemId && playback.isError) send(Command.PlayerError, { itemId, reason: 'playback_unavailable' })
   }, [itemId, playback.isError, send])
 
   if (!started) {
@@ -51,9 +52,9 @@ export function HostPlayer({ identity, session }: Props) {
       <YouTubePlayer
         videoId={info.videoId}
         playing={playing}
-        onEnded={() => send('player.ended', { itemId: item.itemId })}
-        onError={(reason) => send('player.error', { itemId: item.itemId, reason })}
-        onPosition={(positionMs) => send('player.position', { itemId: item.itemId, positionMs })}
+        onEnded={() => send(Command.PlayerEnded, { itemId: item.itemId })}
+        onError={(reason) => send(Command.PlayerError, { itemId: item.itemId, reason })}
+        onPosition={(positionMs) => send(Command.PlayerPosition, { itemId: item.itemId, positionMs })}
       />
     )
   } else {
@@ -73,11 +74,11 @@ export function HostPlayer({ identity, session }: Props) {
         <button
           className={controlClass}
           disabled={!item}
-          onClick={() => send(playing ? 'player.pause' : 'player.resume')}
+          onClick={() => send(playing ? Command.PlayerPause : Command.PlayerResume)}
         >
           {playing ? 'Pause' : 'Resume'}
         </button>
-        <button className={controlClass} disabled={!item} onClick={() => send('player.next')}>
+        <button className={controlClass} disabled={!item} onClick={() => send(Command.PlayerNext)}>
           Next
         </button>
       </div>

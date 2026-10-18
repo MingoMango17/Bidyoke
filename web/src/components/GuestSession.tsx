@@ -1,4 +1,5 @@
 import { useConfig } from '../api/songs'
+import { Command } from '../protocol'
 import type { Identity } from '../lib/identity'
 import type { SessionApi } from '../session/useSession'
 import { ConnectionBadge } from './ConnectionBadge'
@@ -34,7 +35,7 @@ export function GuestSession({ identity, session }: Props) {
           <QueueList
             state={state}
             memberId={identity.memberId}
-            onRemove={(itemId) => session.send('queue.remove', { itemId })}
+            onRemove={(itemId) => session.send(Command.QueueRemove, { itemId })}
           />
           {config.data && (
             <SongSearch
@@ -42,7 +43,7 @@ export function GuestSession({ identity, session }: Props) {
               sources={config.data.sources}
               queuedIds={queuedIds}
               canAdd={session.status === 'open' && !atCap}
-              onAdd={(song) => session.send('queue.add', { songId: song.songId })}
+              onAdd={(song) => session.send(Command.QueueAdd, { songId: song.songId })}
             />
           )}
           {atCap && (

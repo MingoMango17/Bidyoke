@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from typing import Literal
 
 from app import config
+from app.core.messages import Command
 from app.core.song import Resolver, Song, SourceUnavailable
 
 Role = Literal["host", "guest"]
@@ -108,39 +109,39 @@ class Session:
 
     async def handle(self, member: Member, type_: str, payload: dict) -> Result:
         """Apply a client command."""
-        if type_ == "session.lock":
+        if type_ == Command.SESSION_LOCK:
             return Result(self._lock(member, payload))
-        if type_ == "queue.add":
+        if type_ == Command.QUEUE_ADD:
             return Result(await self._queue_add(member, payload))
-        if type_ == "queue.remove":
+        if type_ == Command.QUEUE_REMOVE:
             return Result(self._queue_remove(member, payload))
-        if type_ == "queue.move":
+        if type_ == Command.QUEUE_MOVE:
             return Result(self._queue_move(member, payload))
-        if type_ == "player.next":
+        if type_ == Command.PLAYER_NEXT:
             self._require_host(member)
             return Result(self._skip_current())
-        if type_ == "player.pause":
+        if type_ == Command.PLAYER_PAUSE:
             self._require_host(member)
             return Result(self._set_status("playing", "paused"))
-        if type_ == "player.resume":
+        if type_ == Command.PLAYER_RESUME:
             self._require_host(member)
             return Result(self._set_status("paused", "playing"))
-        if type_ == "player.ended":
+        if type_ == Command.PLAYER_ENDED:
             self._require_host(member)
             return Result(self._finish_current(payload))
-        if type_ == "player.error":
+        if type_ == Command.PLAYER_ERROR:
             self._require_host(member)
             return self._fail_current(payload)
-        if type_ == "player.position":
+        if type_ == Command.PLAYER_POSITION:
             self._require_host(member)
             return self._report_position(payload)
-        if type_ == "session.kick":
+        if type_ == Command.SESSION_KICK:
             self._require_host(member)
             return self._kick(payload)
-        if type_ == "session.end":
+        if type_ == Command.SESSION_END:
             self._require_host(member)
             return Result(ended=True)
-        if type_ == "score.submit":
+        if type_ == Command.SCORE_SUBMIT:
             return Result(self._submit_score(member, payload))
         raise CommandError("unknown_type", f"Unknown message type: {type_}")
 

@@ -2,6 +2,7 @@ import asyncio
 import logging
 
 from app.core.manager import SessionManager
+from app.core.messages import ServerMessage
 from app.core.session import Session
 from app.realtime.conn import Conn
 
@@ -84,16 +85,16 @@ class Hub:
             conn.send(msg)
 
     def notify(self, session: Session, payload: dict) -> None:
-        msg = {"type": "notice", "payload": payload}
+        msg = {"type": ServerMessage.NOTICE, "payload": payload}
         for conn in list(self._rooms.get(session.code, {}).values()):
             conn.send(msg)
 
     def fan_out_position(self, session: Session, payload: dict) -> None:
-        msg = {"type": "player.position", "payload": payload}
+        msg = {"type": ServerMessage.PLAYER_POSITION, "payload": payload}
         for conn in list(self._rooms.get(session.code, {}).values()):
             if conn.member.role != "host":
                 conn.send(msg)
 
     @staticmethod
     def _state_msg(session: Session) -> dict:
-        return {"type": "state", "payload": session.snapshot()}
+        return {"type": ServerMessage.STATE, "payload": session.snapshot()}

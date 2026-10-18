@@ -2,6 +2,7 @@ import logging
 
 from fastapi import WebSocket
 
+from app.core.messages import ClientMessage, ServerMessage
 from app.core.session import CommandError, Member, Session
 from app.ratelimit import TokenBucket
 from app.realtime.conn import Conn
@@ -40,8 +41,8 @@ async def read_loop(ws: WebSocket, hub: Hub, session: Session, member: Member, c
             conn.send(error_msg(e.code, e.message, e.id))
             continue
 
-        if type_ == "ping":
-            conn.send({"type": "pong"})
+        if type_ == ClientMessage.PING:
+            conn.send({"type": ServerMessage.PONG})
             continue
         try:
             result = await session.handle(member, type_, payload)

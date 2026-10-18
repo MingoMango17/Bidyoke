@@ -75,32 +75,59 @@ export interface PositionUpdate {
   serverTime: number
 }
 
+export const ClientMessage = { Ping: 'ping' } as const
+
+export const ServerMessageType = {
+  State: 'state',
+  Ack: 'ack',
+  Error: 'error',
+  Notice: 'notice',
+  PlayerPosition: 'player.position',
+  Pong: 'pong',
+} as const
+
 export type ServerMessage =
-  | { type: 'state'; payload: SessionState }
-  | { type: 'ack'; payload: { id: string } }
-  | { type: 'error'; payload: ServerError }
-  | { type: 'notice'; payload: Notice }
-  | { type: 'player.position'; payload: PositionUpdate }
-  | { type: 'pong' }
+  | { type: typeof ServerMessageType.State; payload: SessionState }
+  | { type: typeof ServerMessageType.Ack; payload: { id: string } }
+  | { type: typeof ServerMessageType.Error; payload: ServerError }
+  | { type: typeof ServerMessageType.Notice; payload: Notice }
+  | { type: typeof ServerMessageType.PlayerPosition; payload: PositionUpdate }
+  | { type: typeof ServerMessageType.Pong }
+
+export const Command = {
+  QueueAdd: 'queue.add',
+  QueueRemove: 'queue.remove',
+  QueueMove: 'queue.move',
+  PlayerNext: 'player.next',
+  PlayerPause: 'player.pause',
+  PlayerResume: 'player.resume',
+  PlayerEnded: 'player.ended',
+  PlayerError: 'player.error',
+  PlayerPosition: 'player.position',
+  ScoreSubmit: 'score.submit',
+  SessionLock: 'session.lock',
+  SessionKick: 'session.kick',
+  SessionEnd: 'session.end',
+} as const
 
 export interface CommandPayloads {
-  'queue.add': { songId: string }
-  'queue.remove': { itemId: string }
-  'queue.move': { itemId: string; toIndex: number }
-  'player.next': undefined
-  'player.pause': undefined
-  'player.resume': undefined
-  'player.ended': { itemId: string }
-  'player.error': { itemId: string; reason: string }
-  'player.position': { itemId: string; positionMs: number }
-  'score.submit': {
+  [Command.QueueAdd]: { songId: string }
+  [Command.QueueRemove]: { itemId: string }
+  [Command.QueueMove]: { itemId: string; toIndex: number }
+  [Command.PlayerNext]: undefined
+  [Command.PlayerPause]: undefined
+  [Command.PlayerResume]: undefined
+  [Command.PlayerEnded]: { itemId: string }
+  [Command.PlayerError]: { itemId: string; reason: string }
+  [Command.PlayerPosition]: { itemId: string; positionMs: number }
+  [Command.ScoreSubmit]: {
     itemId: string
     score: number
     breakdown?: Record<string, number>
   }
-  'session.lock': { locked: boolean }
-  'session.kick': { memberId: string }
-  'session.end': undefined
+  [Command.SessionLock]: { locked: boolean }
+  [Command.SessionKick]: { memberId: string }
+  [Command.SessionEnd]: undefined
 }
 
 export type CommandType = keyof CommandPayloads
