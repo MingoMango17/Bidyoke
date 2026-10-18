@@ -27,3 +27,44 @@ class ServerMessage(StrEnum):
     NOTICE = "notice"
     PLAYER_POSITION = "player.position"
     PONG = "pong"
+
+
+class Role(StrEnum):
+    HOST = "host"
+    GUEST = "guest"
+
+
+class PlayerStatus(StrEnum):
+    IDLE = "idle"
+    PLAYING = "playing"
+    PAUSED = "paused"
+
+
+class NoticeKind(StrEnum):
+    SONG_SKIPPED = "song_skipped"
+    MEMBER_KICKED = "member_kicked"
+    HOST_DISCONNECTED = "host_disconnected"
+    HOST_RECONNECTED = "host_reconnected"
+
+
+class Source(StrEnum):
+    YOUTUBE = "youtube"
+    LOCAL = "local"
+
+
+class ErrorCode(StrEnum):
+    ALREADY_QUEUED = "already_queued"
+    BAD_REQUEST = "bad_request"
+    FORBIDDEN = "forbidden"
+    INVALID_NAME = "invalid_name"
+    INVALID_PAYLOAD = "invalid_payload"
+    INVALID_QUERY = "invalid_query"
+    INVALID_TOKEN = "invalid_token"
+    QUEUE_FULL = "queue_full"
+    RATE_LIMITED = "rate_limited"
+    SESSION_FULL = "session_full"
+    SESSION_LOCKED = "session_locked"
+    SESSION_NOT_FOUND = "session_not_found"
+    SONG_NOT_FOUND = "song_not_found"
+    SOURCE_UNAVAILABLE = "source_unavailable"
+    UNKNOWN_TYPE = "unknown_type"
