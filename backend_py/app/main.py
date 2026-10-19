@@ -4,8 +4,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app import config
-from app.api import error_handlers, sessions, songs, ws
+from app import config, error_handlers
+from app.api import sessions, songs, ws
 from app.container import Container
 from app.core.manager import SessionManager
 from app.logs import setup_logging

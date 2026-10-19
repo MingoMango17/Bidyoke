@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, WebSocket
 
-from app.api.deps import get_container
 from app.container import Container
 from app.core.messages import ErrorCode
+from app.dependencies.container import get_container
 from app.realtime.conn import Conn
 from app.realtime.handshake import deny, origin_allowed
 from app.realtime.loop import read_loop

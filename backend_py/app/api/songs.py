@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends
 
-from app.api.deps import get_container, limit_search, require_member
 from app.container import Container
 from app.core.messages import ErrorCode
 from app.core.song import SourceUnavailable
+from app.dependencies.auth import require_member
+from app.dependencies.container import get_container
+from app.dependencies.rate_limits import limit_search
 from app.errors import AppError
 
 router = APIRouter(prefix="/api", dependencies=[Depends(require_member)])

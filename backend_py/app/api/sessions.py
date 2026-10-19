@@ -1,13 +1,16 @@
 from fastapi import APIRouter, Depends
 
 from app import config
-from app.api.deps import bearer_token, get_container, limit_join, require_session
-from app.api.schemas import JoinBody
 from app.container import Container
 from app.core.messages import ErrorCode, Role
 from app.core.session import Session
 from app.core.validation import clean_name
+from app.dependencies.auth import bearer_token
+from app.dependencies.container import get_container
+from app.dependencies.rate_limits import limit_join
+from app.dependencies.sessions import require_session
 from app.errors import AppError
+from app.schemas import JoinBody
 
 router = APIRouter(prefix="/api/sessions")
 
