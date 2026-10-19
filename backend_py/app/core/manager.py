@@ -7,7 +7,7 @@ import time
 
 from app.core.messages import Role
 from app.core.session import Member, Session
-from app.core.song import Resolver
+from app.core.song import ChannelProvider, Resolver, no_channel
 
 log = logging.getLogger(__name__)
 
@@ -16,8 +16,9 @@ CODE_LENGTH = 5
 
 
 class SessionManager:
-    def __init__(self, resolve: Resolver) -> None:
+    def __init__(self, resolve: Resolver, channel: ChannelProvider = no_channel) -> None:
         self._resolve = resolve
+        self._channel = channel
         self._sessions: dict[str, Session] = {}
 
     def get(self, code: str) -> Session | None:
@@ -40,7 +41,7 @@ class SessionManager:
 
     def create(self, host_name: str = "Host") -> tuple[Session, Member]:
         code = self._new_code()
-        session = Session(code=code, resolve=self._resolve)
+        session = Session(code=code, resolve=self._resolve, channel=self._channel)
         self._sessions[code] = session
         log.info("session created code=%s", code)
         host = self.add_member(session, host_name, Role.HOST)

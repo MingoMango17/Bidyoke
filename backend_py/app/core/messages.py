@@ -54,6 +54,7 @@ class Source(StrEnum):
 
 class SuggestionReason(StrEnum):
     PLAYED_HERE = "played_here"
+    SAME_CHANNEL = "same_channel"
 
 
 class ErrorCode(StrEnum):

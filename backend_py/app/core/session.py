@@ -9,10 +9,11 @@ from datetime import datetime, timezone
 
 from app import config
 from app.core.messages import Command, ErrorCode, NoticeKind, PlayerStatus, Role, SuggestionReason
-from app.core.song import Resolver, Song, SourceUnavailable
+from app.core.song import ChannelProvider, Resolver, Song, SourceUnavailable, no_channel
 
 POSITION_FANOUT_INTERVAL = 1.0
 SUGGESTION_LIMIT = 5
+CHANNEL_LIMIT = 3
 
 
 class CommandError(Exception):
@@ -74,15 +75,17 @@ def _iso(dt: datetime) -> str:
 class Suggestion:
     song: Song
     reason: SuggestionReason
+    context: str | None = None
 
     def to_dict(self) -> dict:
-        return {"song": self.song.to_dict(), "reason": self.reason}
+        return {"song": self.song.to_dict(), "reason": self.reason, "context": self.context}
 
 
 @dataclass
 class Session:
     code: str
     resolve: Resolver = field(default=_no_song, repr=False, compare=False)
+    channel: ChannelProvider = field(default=no_channel, repr=False, compare=False)
     locked: bool = False
     rev: int = 0
     last_activity: float = field(default_factory=time.monotonic)
@@ -344,10 +347,21 @@ class Session:
             (song_id for song_id in picks if song_id not in active),
             key=lambda song_id: (-picks[song_id], -latest[song_id]),
         )
-        return [
+        suggestions: list[Suggestion] = []
+        if self.now_playing is not None:
+            playing = self.now_playing.song
+            related = [
+                s for s in self.channel(playing) if s.song_id not in active and s.song_id not in picks
+            ]
+            suggestions += [
+                Suggestion(song, SuggestionReason.SAME_CHANNEL, playing.channel_title)
+                for song in related[:CHANNEL_LIMIT]
+            ]
+        suggestions += [
             Suggestion(songs[song_id], SuggestionReason.PLAYED_HERE)
             for song_id in ranked[:SUGGESTION_LIMIT]
         ]
+        return suggestions
 
     def snapshot(self) -> dict:
         return {
