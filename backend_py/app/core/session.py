@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import secrets
 import time
+from collections import Counter
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
@@ -11,6 +12,7 @@ from app.core.messages import Command, ErrorCode, NoticeKind, PlayerStatus, Role
 from app.core.song import Resolver, Song, SourceUnavailable
 
 POSITION_FANOUT_INTERVAL = 1.0
+SUGGESTION_LIMIT = 5
 
 
 class CommandError(Exception):
@@ -324,6 +326,17 @@ class Session:
                 return item
         raise CommandError(ErrorCode.INVALID_PAYLOAD, "No queued item with that id.")
 
+    def suggestions(self) -> list[Song]:
+        active = {i.song.song_id for i in (self.now_playing, *self.queue) if i is not None}
+        picks = Counter(i.song.song_id for i in self.history)
+        latest = {i.song.song_id: n for n, i in enumerate(self.history)}
+        songs = {i.song.song_id: i.song for i in self.history}
+        ranked = sorted(
+            (song_id for song_id in picks if song_id not in active),
+            key=lambda song_id: (-picks[song_id], -latest[song_id]),
+        )
+        return [songs[song_id] for song_id in ranked[:SUGGESTION_LIMIT]]
+
     def snapshot(self) -> dict:
         return {
             "code": self.code,
@@ -341,6 +354,7 @@ class Session:
                 for m in self.members.values()
             ],
             "scores": self.scores,
+            "suggestions": [song.to_dict() for song in self.suggestions()],
             "settings": {
                 "maxQueuePerMember": config.MAX_QUEUE_PER_MEMBER,
                 "locked": self.locked,
