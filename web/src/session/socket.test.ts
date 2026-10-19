@@ -53,6 +53,7 @@ function stateWithRev(rev: number): SessionState {
     player: { status: 'idle', positionMs: 0, updatedAt: '2026-10-17T00:00:00Z' },
     members: [],
     scores: [],
+    suggestions: [],
     settings: { maxQueuePerMember: 3, locked: false },
   }
 }

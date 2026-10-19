@@ -61,6 +61,7 @@ export interface SessionState {
   player: PlayerState
   members: Member[]
   scores: Score[]
+  suggestions: Song[]
   settings: { maxQueuePerMember: number; locked: boolean }
 }
 
