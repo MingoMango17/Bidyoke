@@ -1,13 +1,13 @@
 import { Disc3, Pause } from 'lucide-react'
 import { playbackProgress } from '../lib/playbackProgress'
-import { PlayerStatus, type SessionState } from '../protocol'
+import { PlayerStatus, type PositionUpdate, type SessionState } from '../protocol'
 import { Card } from './Layout'
 import { SongThumb } from './SongRow'
 import { EmptyState } from './ui/EmptyState'
 import { ProgressBar } from './ui/ProgressBar'
 
-export function NowPlaying({ state }: { state: SessionState }) {
-  const progress = playbackProgress(state)
+export function NowPlaying({ state, position }: { state: SessionState; position?: PositionUpdate }) {
+  const progress = playbackProgress(state, position)
   const item = state.nowPlaying
   const paused = state.player.status === PlayerStatus.Paused
   const adder = item && state.members.find((m) => m.memberId === item.addedBy)?.name

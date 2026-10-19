@@ -1,7 +1,10 @@
-import type { SessionState } from '../protocol'
+import type { PositionUpdate, SessionState } from '../protocol'
 
-export function playbackProgress(state: SessionState | undefined): number {
+type Reported = Pick<PositionUpdate, 'itemId' | 'positionMs'>
+
+export function playbackProgress(state: SessionState | undefined, reported?: Reported): number {
   const nowPlaying = state?.nowPlaying
   if (!state || !nowPlaying) return 0
-  return Math.min(state.player.positionMs, nowPlaying.song.durationMs)
+  const position = reported?.itemId === nowPlaying.itemId ? reported.positionMs : state.player.positionMs
+  return Math.min(position, nowPlaying.song.durationMs)
 }

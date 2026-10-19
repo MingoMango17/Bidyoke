@@ -73,6 +73,7 @@ export function GuestSession({ identity, session }: Props) {
           {tab === 'queue' && (
             <QueueList
               state={state}
+              position={session.position}
               memberId={identity.memberId}
               onRemove={(itemId) => session.send(Command.QueueRemove, { itemId })}
             />
@@ -116,7 +117,7 @@ export function GuestSession({ identity, session }: Props) {
           className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/90 pb-[env(safe-area-inset-bottom)] backdrop-blur"
         >
           <div className="mx-auto max-w-md">
-            {tab !== 'queue' && <MiniPlayer state={state} />}
+            {tab !== 'queue' && <MiniPlayer state={state} position={session.position} />}
             <Tabs<Tab>
               variant="bar"
               idPrefix={PREFIX}

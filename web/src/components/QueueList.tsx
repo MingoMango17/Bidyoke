@@ -1,5 +1,5 @@
 import { ListMusic, Trash2 } from 'lucide-react'
-import type { SessionState } from '../protocol'
+import type { PositionUpdate, SessionState } from '../protocol'
 import { Card } from './Layout'
 import { NowPlaying } from './NowPlaying'
 import { SongRow } from './SongRow'
@@ -8,16 +8,17 @@ import { EmptyState } from './ui/EmptyState'
 
 interface Props {
   state: SessionState
+  position?: PositionUpdate
   memberId: string
   onRemove: (itemId: string) => void
 }
 
-export function QueueList({ state, memberId, onRemove }: Props) {
+export function QueueList({ state, position, memberId, onRemove }: Props) {
   const nameOf = (id: string) => state.members.find((m) => m.memberId === id)?.name ?? 'Someone'
 
   return (
     <>
-      <NowPlaying state={state} />
+      <NowPlaying state={state} position={position} />
       <Card title={`Up next (${state.queue.length})`}>
         {state.queue.length === 0 ? (
           <EmptyState icon={ListMusic} title="The queue is empty" body="Search for a song or pick a suggestion." />

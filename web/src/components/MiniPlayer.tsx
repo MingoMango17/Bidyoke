@@ -1,11 +1,11 @@
 import { Pause } from 'lucide-react'
 import { playbackProgress } from '../lib/playbackProgress'
-import { PlayerStatus, type SessionState } from '../protocol'
+import { PlayerStatus, type PositionUpdate, type SessionState } from '../protocol'
 import { SongThumb } from './SongRow'
 import { ProgressBar } from './ui/ProgressBar'
 
-export function MiniPlayer({ state }: { state: SessionState }) {
-  const progress = playbackProgress(state)
+export function MiniPlayer({ state, position }: { state: SessionState; position?: PositionUpdate }) {
+  const progress = playbackProgress(state, position)
   const item = state.nowPlaying
   if (!item) return null
   return (

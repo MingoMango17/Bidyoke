@@ -4,7 +4,7 @@ import { usePlayback } from '../api/songs'
 import type { Identity } from '../lib/identity'
 import { playbackProgress } from '../lib/playbackProgress'
 import { PlaybackFailure } from '../lib/youtube'
-import { Command, PlayerStatus, SongSource } from '../protocol'
+import { Command, PlayerStatus, SongSource, type PositionUpdate } from '../protocol'
 import type { SessionApi } from '../session/useSession'
 import { Card } from './Layout'
 import { Button } from './ui/Button'
@@ -34,7 +34,8 @@ export function HostPlayer({ identity, session }: Props) {
   const item = state?.nowPlaying ?? undefined
   const itemId = item?.itemId
   const playback = usePlayback(started ? item?.song.songId : undefined, identity.token)
-  const progress = playbackProgress(state)
+  const [live, setLive] = useState<Pick<PositionUpdate, 'itemId' | 'positionMs'>>()
+  const progress = playbackProgress(state, live)
   const { send } = session
 
   useEffect(() => {
@@ -76,7 +77,10 @@ export function HostPlayer({ identity, session }: Props) {
         playing={playing}
         onEnded={() => send(Command.PlayerEnded, { itemId: item.itemId })}
         onError={(reason) => send(Command.PlayerError, { itemId: item.itemId, reason })}
-        onPosition={(positionMs) => send(Command.PlayerPosition, { itemId: item.itemId, positionMs })}
+        onPosition={(positionMs) => {
+          setLive({ itemId: item.itemId, positionMs })
+          send(Command.PlayerPosition, { itemId: item.itemId, positionMs })
+        }}
       />
     )
   } else {
