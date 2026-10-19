@@ -9,6 +9,7 @@ import { QueueList } from './QueueList'
 import { SessionClosed } from './SessionClosed'
 import { SessionFlashes } from './SessionFlashes'
 import { SongSearch } from './SongSearch'
+import { Suggestions } from './Suggestions'
 
 interface Props {
   identity: Identity
@@ -42,6 +43,11 @@ export function GuestSession({ identity, session }: Props) {
             state={state}
             memberId={identity.memberId}
             onRemove={(itemId) => session.send(Command.QueueRemove, { itemId })}
+          />
+          <Suggestions
+            songs={state.suggestions}
+            canAdd={session.status === ConnectionStatus.Open && !atCap}
+            onAdd={(song) => session.send(Command.QueueAdd, { songId: song.songId })}
           />
           {config.data && (
             <SongSearch
