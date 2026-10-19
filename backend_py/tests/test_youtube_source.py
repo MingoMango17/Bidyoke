@@ -110,3 +110,78 @@ def test_cached_search_does_not_spend_budget():
     asyncio.run(source.search("x", 5))
     asyncio.run(source.search("x", 5))
     assert len(calls) == 2
+
+
+CHANNEL_ID = "UC" + "a" * 22
+
+
+def channel_handler(calls, videos):
+    def handler(request):
+        calls.append(request.url.path.rsplit("/", 1)[-1])
+        path = request.url.path
+        if path.endswith("/channels"):
+            return httpx.Response(
+                200, json={"items": [{"contentDetails": {"relatedPlaylists": {"uploads": "UUx"}}}]}
+            )
+        if path.endswith("/playlistItems"):
+            return httpx.Response(
+                200, json={"items": [{"contentDetails": {"videoId": v["id"]}} for v in videos]}
+            )
+        return httpx.Response(200, json={"items": videos})
+
+    return handler
+
+
+def with_stats(video_id, views, embeddable=True):
+    item = video_item(video_id, embeddable=embeddable)
+    item["statistics"] = {"viewCount": str(views)}
+    item["snippet"]["channelId"] = CHANNEL_ID
+    item["snippet"]["channelTitle"] = "Karaoke Hub"
+    return item
+
+
+def test_more_from_channel_ranks_by_views_and_keeps_embeddable_songs():
+    calls = []
+    videos = [
+        with_stats("aaaaaaaaaaa", 10),
+        with_stats("bbbbbbbbbbb", 5000),
+        with_stats("ccccccccccc", 999999, embeddable=False),
+        with_stats("ddddddddddd", 300),
+    ]
+    source = make_source(channel_handler(calls, videos))
+    songs = asyncio.run(source.more_from_channel(CHANNEL_ID))
+    assert [s.song_id for s in songs] == [
+        "youtube:bbbbbbbbbbb",
+        "youtube:ddddddddddd",
+        "youtube:aaaaaaaaaaa",
+    ]
+    assert songs[0].channel_id == CHANNEL_ID
+    assert songs[0].channel_title == "Karaoke Hub"
+    assert calls == ["channels", "playlistItems", "videos"]
+
+
+def test_more_from_channel_is_cached_and_costs_three_units():
+    calls = []
+    source = YouTubeSource(
+        "test-key",
+        QuotaBudget(10),
+        transport=httpx.MockTransport(channel_handler(calls, [with_stats("aaaaaaaaaaa", 1)])),
+    )
+    asyncio.run(source.more_from_channel(CHANNEL_ID))
+    asyncio.run(source.more_from_channel(CHANNEL_ID))
+    assert len(calls) == 3
+    with pytest.raises(SourceUnavailable):
+        QuotaBudget(2).charge(3)
+
+
+def test_more_from_channel_ignores_malformed_channel_ids_without_calling_the_api():
+    calls = []
+    source = make_source(channel_handler(calls, []))
+    assert asyncio.run(source.more_from_channel("not-a-channel")) == []
+    assert calls == []
+
+
+def test_resolved_songs_carry_their_channel():
+    source = make_source(api_handler([], [with_stats("aaaaaaaaaaa", 1)]))
+    song = asyncio.run(source.resolve("youtube:aaaaaaaaaaa"))
+    assert (song.channel_id, song.channel_title) == (CHANNEL_ID, "Karaoke Hub")

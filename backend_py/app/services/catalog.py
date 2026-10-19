@@ -53,6 +53,13 @@ class SongCatalog:
         source = self._sources.get(song_id.partition(":")[0])
         return await source.resolve(song_id) if source else None
 
+    async def related(self, song: Song) -> list[Song]:
+        source = self._sources.get(song.source)
+        more = getattr(source, "more_from_channel", None)
+        if more is None or not song.channel_id:
+            return []
+        return await more(song.channel_id)
+
     async def playback(self, song_id: str) -> dict | None:
         source = self._sources.get(song_id.partition(":")[0])
         return await source.playback(song_id) if source else None

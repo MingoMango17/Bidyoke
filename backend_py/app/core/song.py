@@ -18,6 +18,8 @@ class Song:
     duration_ms: int
     lyrics: bool = False
     scoring: bool = False
+    channel_id: str | None = None
+    channel_title: str | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -32,3 +34,8 @@ class Song:
 
 
 Resolver = Callable[[str], Awaitable[Song | None]]
+ChannelProvider = Callable[[Song], list[Song]]
+
+
+def no_channel(_song: Song) -> list[Song]:
+    return []

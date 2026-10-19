@@ -14,9 +14,11 @@ API_URL = "https://www.googleapis.com/youtube/v3"
 SEARCH_TTL = 6 * 3600
 SONG_TTL = 24 * 3600
 TIMEOUT = 5.0
-UNIT_COSTS = {"search": 100, "videos": 1}
+UNIT_COSTS = {"search": 100, "videos": 1, "channels": 1, "playlistItems": 1}
+CHANNEL_UPLOADS = 50
 
 _VIDEO_ID = re.compile(r"^[A-Za-z0-9_-]{11}$")
+_CHANNEL_ID = re.compile(r"^UC[A-Za-z0-9_-]{22}$")
 _DURATION = re.compile(r"^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$")
 
 
@@ -34,6 +36,8 @@ class YouTubeSource:
         self._transport = transport
         self._searches = TTLCache(SEARCH_TTL)
         self._songs = TTLCache(SONG_TTL)
+        self._uploads = TTLCache(SONG_TTL)
+        self._channels = TTLCache(SONG_TTL)
 
     async def search(self, q: str, limit: int) -> list[Song]:
         key = f"{' '.join(q.lower().split())}|{limit}"
@@ -54,6 +58,43 @@ class YouTubeSource:
         songs = await self._videos(ids)
         self._searches.set(key, songs)
         return songs
+
+    async def more_from_channel(self, channel_id: str) -> list[Song]:
+        if not _CHANNEL_ID.match(channel_id):
+            return []
+        cached = self._channels.get(channel_id)
+        if cached is not None:
+            return cached
+        songs: list[Song] = []
+        uploads = await self._uploads_playlist(channel_id)
+        if uploads:
+            listing = await self._get(
+                "playlistItems",
+                {"part": "contentDetails", "playlistId": uploads, "maxResults": CHANNEL_UPLOADS},
+            )
+            ids = [i["contentDetails"]["videoId"] for i in listing.get("items", [])]
+            if ids:
+                body = await self._get(
+                    "videos",
+                    {"part": "snippet,contentDetails,status,statistics", "id": ",".join(ids)},
+                )
+                items = [i for i in body.get("items", []) if i.get("status", {}).get("embeddable")]
+                items.sort(key=_view_count, reverse=True)
+                songs = [_to_song(item) for item in items]
+                for song in songs:
+                    self._songs.set(song.song_id.partition(":")[2], song)
+        self._channels.set(channel_id, songs)
+        return songs
+
+    async def _uploads_playlist(self, channel_id: str) -> str | None:
+        cached = self._uploads.get(channel_id)
+        if cached is not None:
+            return cached or None
+        body = await self._get("channels", {"part": "contentDetails", "id": channel_id})
+        items = body.get("items", [])
+        uploads = items[0]["contentDetails"]["relatedPlaylists"]["uploads"] if items else ""
+        self._uploads.set(channel_id, uploads)
+        return uploads or None
 
     async def resolve(self, song_id: str) -> Song | None:
         video_id = song_id.partition(":")[2]
@@ -117,7 +158,16 @@ def _to_song(item: dict) -> Song:
         artist=None,
         thumbnail=thumb,
         duration_ms=_duration_ms(item.get("contentDetails", {}).get("duration", "")),
+        channel_id=snippet.get("channelId"),
+        channel_title=snippet.get("channelTitle"),
     )
+
+
+def _view_count(item: dict) -> int:
+    try:
+        return int(item.get("statistics", {}).get("viewCount", 0))
+    except (TypeError, ValueError):
+        return 0
 
 
 def _duration_ms(iso: str) -> int:
