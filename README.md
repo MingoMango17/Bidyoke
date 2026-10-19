@@ -53,6 +53,15 @@ All settings are environment variables.
 | `LOG_LEVEL` | `INFO` | Log verbosity: `DEBUG`, `INFO`, `WARNING`, `ERROR`. |
 | `MEDIA_AUTH` | `off` | Reserved for the local library. |
 
+## Suggestions
+
+Sessions show suggestion cards under the queue:
+
+- **More from <channel>** while a YouTube song is playing: up to 3 of that channel's most viewed embeddable videos. The first lookup for a channel costs about 3 YouTube quota units and is cached for a day.
+- **Play again**: songs already played in this session that are not queued.
+
+The channel card appears a moment after a song starts, once the lookup has finished.
+
 ## Tests
 
 ```bash

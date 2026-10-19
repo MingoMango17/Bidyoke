@@ -6,6 +6,9 @@ export type SongSource = (typeof SongSource)[keyof typeof SongSource]
 export const PlayerStatus = { Idle: 'idle', Playing: 'playing', Paused: 'paused' } as const
 export type PlayerStatus = (typeof PlayerStatus)[keyof typeof PlayerStatus]
 
+export const SuggestionReason = { PlayedHere: 'played_here', SameChannel: 'same_channel' } as const
+export type SuggestionReason = (typeof SuggestionReason)[keyof typeof SuggestionReason]
+
 export const NoticeKind = {
   SongSkipped: 'song_skipped',
   HostDisconnected: 'host_disconnected',
@@ -39,6 +42,12 @@ export interface Member {
   connected: boolean
 }
 
+export interface Suggestion {
+  song: Song
+  reason: SuggestionReason
+  context: string | null
+}
+
 export interface PlayerState {
   status: PlayerStatus
   positionMs: number
@@ -61,6 +70,7 @@ export interface SessionState {
   player: PlayerState
   members: Member[]
   scores: Score[]
+  suggestions: Suggestion[]
   settings: { maxQueuePerMember: number; locked: boolean }
 }
 

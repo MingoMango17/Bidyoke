@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from collections.abc import Callable
 
 from app.core.manager import SessionManager
 from app.core.messages import NoticeKind, Role, ServerMessage
@@ -17,6 +18,7 @@ class Hub:
         self._grace = grace_seconds
         self._rooms: dict[str, dict[str, Conn]] = {}
         self._timers: dict[str, asyncio.Task] = {}
+        self.on_state: Callable[[Session], None] | None = None
 
     async def attach(self, session: Session, conn: Conn) -> None:
         room = self._rooms.setdefault(session.code, {})
@@ -83,6 +85,8 @@ class Hub:
         msg = self._state_msg(session)
         for conn in list(self._rooms.get(session.code, {}).values()):
             conn.send(msg)
+        if self.on_state is not None:
+            self.on_state(session)
 
     def notify(self, session: Session, payload: dict) -> None:
         msg = {"type": ServerMessage.NOTICE, "payload": payload}

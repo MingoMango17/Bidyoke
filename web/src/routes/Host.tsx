@@ -9,8 +9,11 @@ import { JoinCard } from '../components/JoinCard'
 import { MemberList } from '../components/MemberList'
 import { SessionClosed } from '../components/SessionClosed'
 import { SessionFlashes } from '../components/SessionFlashes'
+import { Suggestions } from '../components/Suggestions'
+import { Command } from '../protocol'
 import { loadIdentity } from '../lib/identity'
 import { endedReason } from '../session/closed'
+import { ConnectionStatus } from '../session/socket'
 import { useSession } from '../session/useSession'
 
 export function Host() {
@@ -52,6 +55,11 @@ export function Host() {
           {state && (
             <>
               <HostQueue state={state} send={session.send} />
+              <Suggestions
+                suggestions={state.suggestions}
+                canAdd={session.status === ConnectionStatus.Open}
+                onAdd={(song) => session.send(Command.QueueAdd, { songId: song.songId })}
+              />
               <MemberList state={state} send={session.send} />
             </>
           )}

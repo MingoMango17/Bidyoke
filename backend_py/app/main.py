@@ -15,6 +15,7 @@ from app.errors import handlers as error_handlers
 from app.logs import setup_logging
 from app.realtime.hub import Hub
 from app.services.catalog import SongCatalog
+from app.services.channel import ChannelSuggestions
 
 
 log = logging.getLogger(__name__)
@@ -42,11 +43,15 @@ def create_app() -> FastAPI:
     setup_logging()
     app = FastAPI(title="Bidyoke", docs_url="/docs", lifespan=lifespan)
     catalog = SongCatalog.from_config()
-    session_manager = SessionManager(catalog.resolve)
+    channel = ChannelSuggestions(catalog.related)
+    session_manager = SessionManager(catalog.resolve, channel.lookup)
+    hub = Hub(session_manager, config.HOST_GRACE_SECONDS)
+    channel.rebroadcast = hub.broadcast
+    hub.on_state = channel.warm
     app.state.container = Container(
         catalog=catalog,
         sessions=session_manager,
-        hub=Hub(session_manager, config.HOST_GRACE_SECONDS),
+        hub=hub,
         join_limiter=KeyedLimiter(config.JOIN_RATE_PER_MIN),
         search_limiter=KeyedLimiter(config.SEARCH_RATE_PER_MIN),
     )

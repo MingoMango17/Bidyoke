@@ -52,6 +52,11 @@ class Source(StrEnum):
     LOCAL = "local"
 
 
+class SuggestionReason(StrEnum):
+    PLAYED_HERE = "played_here"
+    SAME_CHANNEL = "same_channel"
+
+
 class ErrorCode(StrEnum):
     ALREADY_QUEUED = "already_queued"
     BAD_REQUEST = "bad_request"

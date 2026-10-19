@@ -3,14 +3,17 @@ from __future__ import annotations
 
 import secrets
 import time
+from collections import Counter
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
 from app import config
-from app.core.messages import Command, ErrorCode, NoticeKind, PlayerStatus, Role
-from app.core.song import Resolver, Song, SourceUnavailable
+from app.core.messages import Command, ErrorCode, NoticeKind, PlayerStatus, Role, SuggestionReason
+from app.core.song import ChannelProvider, Resolver, Song, SourceUnavailable, no_channel
 
 POSITION_FANOUT_INTERVAL = 1.0
+SUGGESTION_LIMIT = 5
+CHANNEL_LIMIT = 3
 
 
 class CommandError(Exception):
@@ -68,10 +71,21 @@ def _iso(dt: datetime) -> str:
     return dt.isoformat().replace("+00:00", "Z")
 
 
+@dataclass(frozen=True)
+class Suggestion:
+    song: Song
+    reason: SuggestionReason
+    context: str | None = None
+
+    def to_dict(self) -> dict:
+        return {"song": self.song.to_dict(), "reason": self.reason, "context": self.context}
+
+
 @dataclass
 class Session:
     code: str
     resolve: Resolver = field(default=_no_song, repr=False, compare=False)
+    channel: ChannelProvider = field(default=no_channel, repr=False, compare=False)
     locked: bool = False
     rev: int = 0
     last_activity: float = field(default_factory=time.monotonic)
@@ -324,6 +338,31 @@ class Session:
                 return item
         raise CommandError(ErrorCode.INVALID_PAYLOAD, "No queued item with that id.")
 
+    def suggestions(self) -> list[Suggestion]:
+        active = {i.song.song_id for i in (self.now_playing, *self.queue) if i is not None}
+        picks = Counter(i.song.song_id for i in self.history)
+        latest = {i.song.song_id: n for n, i in enumerate(self.history)}
+        songs = {i.song.song_id: i.song for i in self.history}
+        ranked = sorted(
+            (song_id for song_id in picks if song_id not in active),
+            key=lambda song_id: (-picks[song_id], -latest[song_id]),
+        )
+        suggestions: list[Suggestion] = []
+        if self.now_playing is not None:
+            playing = self.now_playing.song
+            related = [
+                s for s in self.channel(playing) if s.song_id not in active and s.song_id not in picks
+            ]
+            suggestions += [
+                Suggestion(song, SuggestionReason.SAME_CHANNEL, playing.channel_title)
+                for song in related[:CHANNEL_LIMIT]
+            ]
+        suggestions += [
+            Suggestion(songs[song_id], SuggestionReason.PLAYED_HERE)
+            for song_id in ranked[:SUGGESTION_LIMIT]
+        ]
+        return suggestions
+
     def snapshot(self) -> dict:
         return {
             "code": self.code,
@@ -341,6 +380,7 @@ class Session:
                 for m in self.members.values()
             ],
             "scores": self.scores,
+            "suggestions": [s.to_dict() for s in self.suggestions()],
             "settings": {
                 "maxQueuePerMember": config.MAX_QUEUE_PER_MEMBER,
                 "locked": self.locked,
