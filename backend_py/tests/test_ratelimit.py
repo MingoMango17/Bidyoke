@@ -1,4 +1,4 @@
-from app.ratelimit import KeyedLimiter, TokenBucket
+from app.core.ratelimit import KeyedLimiter, TokenBucket
 
 
 class Clock:

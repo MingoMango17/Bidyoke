@@ -4,14 +4,15 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app import config, error_handlers
+from app import config
 from app.api import system, ws
 from app.api.router import api_router
 from app.container import Container
 from app.core.manager import SessionManager
+from app.core.ratelimit import KeyedLimiter
+from app.core.reaper import reap_idle
+from app.errors import handlers as error_handlers
 from app.logs import setup_logging
-from app.ratelimit import KeyedLimiter
-from app.reaper import reap_idle
 from app.realtime.hub import Hub
 from app.services.catalog import SongCatalog
 

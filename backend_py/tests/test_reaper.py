@@ -1,7 +1,7 @@
 import asyncio
 
 from app.core.manager import SessionManager
-from app.reaper import reap_idle
+from app.core.reaper import reap_idle
 
 
 async def no_song(_song_id):

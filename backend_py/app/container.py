@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from app.core.manager import SessionManager
-from app.ratelimit import KeyedLimiter
+from app.core.ratelimit import KeyedLimiter
 from app.realtime.hub import Hub
 from app.services.catalog import SongCatalog
 

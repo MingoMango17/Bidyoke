@@ -3,8 +3,8 @@ import logging
 from fastapi import WebSocket
 
 from app.core.messages import ClientMessage, ErrorCode, ServerMessage
+from app.core.ratelimit import TokenBucket
 from app.core.session import CommandError, Member, Session
-from app.ratelimit import TokenBucket
 from app.realtime.conn import Conn
 from app.realtime.hub import Hub
 from app.realtime.protocol import MAX_MESSAGE_BYTES, BadFrame, error_msg, parse_frame
