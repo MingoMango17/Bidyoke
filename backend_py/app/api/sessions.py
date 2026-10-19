@@ -12,7 +12,7 @@ from app.dependencies.sessions import require_session
 from app.errors import AppError
 from app.schemas import JoinBody
 
-router = APIRouter(prefix="/api/sessions")
+router = APIRouter(prefix="/sessions")
 
 
 @router.post("", status_code=201)

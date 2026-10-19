@@ -8,7 +8,7 @@ from app.dependencies.container import get_container
 from app.dependencies.rate_limits import limit_search
 from app.errors import AppError
 
-router = APIRouter(prefix="/api", dependencies=[Depends(require_member)])
+router = APIRouter(dependencies=[Depends(require_member)])
 
 QUERY_MAX = 100
 LIMIT_MAX = 50

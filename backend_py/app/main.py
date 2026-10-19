@@ -5,7 +5,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app import config, error_handlers
-from app.api import sessions, songs, ws
+from app.api import system, ws
+from app.api.router import api_router
 from app.container import Container
 from app.core.manager import SessionManager
 from app.logs import setup_logging
@@ -49,27 +50,9 @@ def create_app() -> FastAPI:
         search_limiter=KeyedLimiter(config.SEARCH_RATE_PER_MIN),
     )
     error_handlers.install(app)
-    app.include_router(sessions.router)
-    app.include_router(songs.router)
+    app.include_router(system.health)
+    app.include_router(api_router)
     app.include_router(ws.router)
-
-    @app.get("/healthz")
-    async def healthz():
-        return {
-            "status": "ok",
-            "protocolVersion": config.PROTOCOL_VERSION,
-            "backend": config.BACKEND,
-            "version": config.VERSION,
-        }
-
-    @app.get("/api/config")
-    async def get_config():
-        return {
-            "sources": config.SOURCES,
-            "mediaAuth": config.MEDIA_AUTH,
-            "maxQueuePerMember": config.MAX_QUEUE_PER_MEMBER,
-            "protocolVersion": config.PROTOCOL_VERSION,
-        }
 
     return app
 

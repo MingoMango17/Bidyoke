@@ -7,10 +7,10 @@ from app.realtime.conn import Conn
 from app.realtime.handshake import deny, origin_allowed
 from app.realtime.loop import read_loop
 
-router = APIRouter()
+router = APIRouter(prefix="/ws")
 
 
-@router.websocket("/ws/sessions/{code}")
+@router.websocket("/sessions/{code}")
 async def session_socket(
     ws: WebSocket, code: str, container: Container = Depends(get_container)
 ):
