@@ -56,7 +56,7 @@ export function Host() {
             <>
               <HostQueue state={state} send={session.send} />
               <Suggestions
-                songs={state.suggestions}
+                suggestions={state.suggestions}
                 canAdd={session.status === ConnectionStatus.Open}
                 onAdd={(song) => session.send(Command.QueueAdd, { songId: song.songId })}
               />

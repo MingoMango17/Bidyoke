@@ -45,7 +45,7 @@ export function GuestSession({ identity, session }: Props) {
             onRemove={(itemId) => session.send(Command.QueueRemove, { itemId })}
           />
           <Suggestions
-            songs={state.suggestions}
+            suggestions={state.suggestions}
             canAdd={session.status === ConnectionStatus.Open && !atCap}
             onAdd={(song) => session.send(Command.QueueAdd, { songId: song.songId })}
           />
