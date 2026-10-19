@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api, ApiError } from '../api/client'
 import type { RejoinResponse } from '../api/types'
-import type { Identity } from '../lib/identity'
+import { clearIdentity, type Identity } from '../lib/identity'
 import type {
   CommandArgs,
   CommandType,
@@ -9,6 +9,7 @@ import type {
   ServerError,
   SessionState,
 } from '../protocol'
+import { endedReason } from './closed'
 import {
   SessionSocket,
   ConnectionStatus,
@@ -78,6 +79,11 @@ export function useSession(identity: Identity | undefined) {
     [],
   )
   const reconnect = useCallback(() => setGeneration((g) => g + 1), [])
+
+  const over = endedReason(status, closeReason) !== undefined
+  useEffect(() => {
+    if (over && code) clearIdentity(code)
+  }, [over, code])
 
   return { status, closeReason, state, lastError, lastNotice, send, reconnect }
 }

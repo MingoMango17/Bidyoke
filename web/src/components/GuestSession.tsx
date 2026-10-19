@@ -1,10 +1,12 @@
 import { useConfig } from '../api/songs'
 import { Command } from '../protocol'
 import type { Identity } from '../lib/identity'
+import { endedReason } from '../session/closed'
 import { ConnectionStatus } from '../session/socket'
 import type { SessionApi } from '../session/useSession'
 import { ConnectionBadge } from './ConnectionBadge'
 import { QueueList } from './QueueList'
+import { SessionClosed } from './SessionClosed'
 import { SessionFlashes } from './SessionFlashes'
 import { SongSearch } from './SongSearch'
 
@@ -19,6 +21,9 @@ export function GuestSession({ identity, session }: Props) {
   const mine = state?.queue.filter((item) => item.addedBy === identity.memberId) ?? []
   const atCap = state !== undefined && mine.length >= state.settings.maxQueuePerMember
   const queuedIds = new Set(mine.map((item) => item.song.songId))
+
+  const over = endedReason(session.status, session.closeReason)
+  if (over) return <SessionClosed reason={over} />
 
   return (
     <>

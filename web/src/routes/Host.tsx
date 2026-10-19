@@ -1,4 +1,5 @@
 import { Link, useParams } from '@tanstack/react-router'
+import { useState } from 'react'
 import { Role } from '../api/types'
 import { Card } from '../components/Layout'
 import { ConnectionBadge } from '../components/ConnectionBadge'
@@ -6,13 +7,15 @@ import { HostPlayer } from '../components/HostPlayer'
 import { HostQueue } from '../components/HostQueue'
 import { JoinCard } from '../components/JoinCard'
 import { MemberList } from '../components/MemberList'
+import { SessionClosed } from '../components/SessionClosed'
 import { SessionFlashes } from '../components/SessionFlashes'
 import { loadIdentity } from '../lib/identity'
+import { endedReason } from '../session/closed'
 import { useSession } from '../session/useSession'
 
 export function Host() {
   const { code } = useParams({ from: '/host/$code' })
-  const identity = loadIdentity(code)
+  const [identity] = useState(() => loadIdentity(code))
   const isHost = identity?.role === Role.Host
   const session = useSession(isHost ? identity : undefined)
 
@@ -26,6 +29,9 @@ export function Host() {
       </Card>
     )
   }
+
+  const over = endedReason(session.status, session.closeReason)
+  if (over) return <SessionClosed reason={over} />
 
   const { state } = session
   return (
