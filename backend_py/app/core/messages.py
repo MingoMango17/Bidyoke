@@ -52,6 +52,10 @@ class Source(StrEnum):
     LOCAL = "local"
 
 
+class SuggestionReason(StrEnum):
+    PLAYED_HERE = "played_here"
+
+
 class ErrorCode(StrEnum):
     ALREADY_QUEUED = "already_queued"
     BAD_REQUEST = "bad_request"

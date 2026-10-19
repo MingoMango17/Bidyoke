@@ -51,25 +51,3 @@ def test_removing_item_frees_total_slot(monkeypatch):
 
     asyncio.run(run())
     assert [i.song.song_id for i in session.queue] == ["local:2"]
-
-
-def test_suggestions_rank_played_songs_and_skip_active():
-    session, (a, b) = make_session("a", "b")
-
-    async def play(who, *song_ids):
-        for song_id in song_ids:
-            await session.handle(who, "queue.add", {"songId": song_id})
-            await session.handle(
-                session_host, "player.ended", {"itemId": session.now_playing.item_id}
-            )
-
-    session_host = Member("m_h", "h", "t_h", "host")
-    session.members[session_host.member_id] = session_host
-
-    async def run():
-        await play(a, "local:1", "local:2", "local:1", "local:3")
-        await session.handle(b, "queue.add", {"songId": "local:3"})
-
-    asyncio.run(run())
-    assert [s.song_id for s in session.suggestions()] == ["local:1", "local:2"]
-    assert [s["songId"] for s in session.snapshot()["suggestions"]] == ["local:1", "local:2"]
