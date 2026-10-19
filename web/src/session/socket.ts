@@ -4,6 +4,7 @@ import {
   type CommandArgs,
   type CommandType,
   type Notice,
+  type PositionUpdate,
   type ServerError,
   type ServerMessage,
   type SessionState,
@@ -37,6 +38,7 @@ export interface SocketHandlers {
   onState: (state: SessionState) => void
   onError: (error: ServerError) => void
   onNotice: (notice: Notice) => void
+  onPosition?: (position: PositionUpdate) => void
 }
 
 export interface SocketOptions {
@@ -149,6 +151,9 @@ export class SessionSocket {
         return
       case ServerMessageType.Notice:
         handlers.onNotice(message.payload)
+        return
+      case ServerMessageType.PlayerPosition:
+        handlers.onPosition?.(message.payload)
         return
       default:
         return

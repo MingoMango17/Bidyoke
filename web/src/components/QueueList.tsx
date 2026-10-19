@@ -1,35 +1,29 @@
-import { PlayerStatus, type SessionState } from '../protocol'
+import { ListMusic, Trash2 } from 'lucide-react'
+import type { PositionUpdate, SessionState } from '../protocol'
 import { Card } from './Layout'
+import { NowPlaying } from './NowPlaying'
 import { SongRow } from './SongRow'
+import { Button } from './ui/Button'
+import { EmptyState } from './ui/EmptyState'
 
 interface Props {
   state: SessionState
+  position?: PositionUpdate
   memberId: string
   onRemove: (itemId: string) => void
 }
 
-export function QueueList({ state, memberId, onRemove }: Props) {
+export function QueueList({ state, position, memberId, onRemove }: Props) {
   const nameOf = (id: string) => state.members.find((m) => m.memberId === id)?.name ?? 'Someone'
 
   return (
     <>
-      <Card title="Now playing">
-        {state.nowPlaying ? (
-          <ul>
-            <SongRow
-              song={state.nowPlaying.song}
-              note={`${nameOf(state.nowPlaying.addedBy)}${state.player.status === PlayerStatus.Paused ? ' · paused' : ''}`}
-            />
-          </ul>
-        ) : (
-          <p className="text-sm text-zinc-500">Nothing is playing. Add a song to start.</p>
-        )}
-      </Card>
+      <NowPlaying state={state} position={position} />
       <Card title={`Up next (${state.queue.length})`}>
         {state.queue.length === 0 ? (
-          <p className="text-sm text-zinc-500">The queue is empty.</p>
+          <EmptyState icon={ListMusic} title="The queue is empty" body="Search for a song or pick a suggestion." />
         ) : (
-          <ol className="divide-y divide-zinc-200 dark:divide-zinc-800">
+          <ol className="divide-y divide-line">
             {state.queue.map((item) => (
               <SongRow
                 key={item.itemId}
@@ -37,12 +31,9 @@ export function QueueList({ state, memberId, onRemove }: Props) {
                 note={nameOf(item.addedBy)}
                 action={
                   item.addedBy === memberId && (
-                    <button
-                      className="text-sm text-red-600 dark:text-red-400"
-                      onClick={() => onRemove(item.itemId)}
-                    >
-                      Remove
-                    </button>
+                    <Button variant="ghost" size="icon" aria-label={`Remove ${item.song.title}`} onClick={() => onRemove(item.itemId)}>
+                      <Trash2 className="size-4" />
+                    </Button>
                   )
                 }
               />

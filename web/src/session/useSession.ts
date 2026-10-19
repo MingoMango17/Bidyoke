@@ -6,6 +6,7 @@ import type {
   CommandArgs,
   CommandType,
   Notice,
+  PositionUpdate,
   ServerError,
   SessionState,
 } from '../protocol'
@@ -49,6 +50,7 @@ export function useSession(identity: Identity | undefined) {
   const [state, setState] = useState<SessionState>()
   const [lastError, setLastError] = useState<ServerError>()
   const [lastNotice, setLastNotice] = useState<Notice>()
+  const [position, setPosition] = useState<PositionUpdate>()
 
   useEffect(() => {
     if (!code || !token) return
@@ -63,6 +65,7 @@ export function useSession(identity: Identity | undefined) {
         onState: setState,
         onError: setLastError,
         onNotice: setLastNotice,
+        onPosition: setPosition,
       },
     })
     socketRef.current = next
@@ -87,5 +90,5 @@ export function useSession(identity: Identity | undefined) {
     if (over && code) clearIdentity(code)
   }, [over, code])
 
-  return { status, closeReason, state, lastError, lastNotice, send, reconnect }
+  return { status, closeReason, state, lastError, lastNotice, position, send, reconnect }
 }

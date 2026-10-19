@@ -1,7 +1,10 @@
+import { Crown, Lock, LockOpen, LogOut, UserMinus } from 'lucide-react'
+import { useState } from 'react'
 import { Role } from '../api/types'
 import { Command, type SessionState } from '../protocol'
 import type { SessionApi } from '../session/useSession'
-import { Card } from './Layout'
+import { Button } from './ui/Button'
+import { ConfirmDialog } from './ui/ConfirmDialog'
 
 interface Props {
   state: SessionState
@@ -10,42 +13,53 @@ interface Props {
 
 export function MemberList({ state, send }: Props) {
   const { locked } = state.settings
-
-  function end() {
-    if (window.confirm('End the session for everyone?')) send(Command.SessionEnd)
-  }
+  const [confirmingEnd, setConfirmingEnd] = useState(false)
 
   return (
-    <Card title={`People (${state.members.length})`}>
-      <ul className="flex flex-col gap-1 text-sm">
+    <div className="flex flex-col gap-4">
+      <ul className="flex flex-col divide-y divide-line">
         {state.members.map((m) => (
-          <li key={m.memberId} className="flex items-center justify-between gap-2">
-            <span className={m.connected ? '' : 'text-zinc-400'}>
-              {m.name}
-              {m.role === Role.Host && ' (host)'}
+          <li key={m.memberId} className="flex items-center justify-between gap-2 py-2">
+            <span className="flex min-w-0 items-center gap-2">
+              <span
+                className={`size-2 shrink-0 rounded-full ${m.connected ? 'bg-success' : 'bg-muted/40'}`}
+                role="img"
+                aria-label={m.connected ? 'Online' : 'Offline'}
+              />
+              <span className={`truncate ${m.connected ? '' : 'text-muted'}`}>{m.name}</span>
+              {m.role === Role.Host && <Crown className="size-4 shrink-0 text-brand" aria-label="Host" />}
             </span>
             {m.role !== Role.Host && (
-              <button
-                className="text-red-600 dark:text-red-400"
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={`Kick ${m.name}`}
                 onClick={() => send(Command.SessionKick, { memberId: m.memberId })}
               >
-                Kick
-              </button>
+                <UserMinus className="size-4 text-danger" />
+              </Button>
             )}
           </li>
         ))}
       </ul>
-      <div className="mt-4 flex gap-2 text-sm">
-        <button
-          className="rounded border border-zinc-300 px-3 py-1 dark:border-zinc-700"
-          onClick={() => send(Command.SessionLock, { locked: !locked })}
-        >
+      <div className="flex flex-wrap gap-2 border-t border-line pt-4">
+        <Button variant="secondary" size="sm" onClick={() => send(Command.SessionLock, { locked: !locked })}>
+          {locked ? <LockOpen className="size-4" /> : <Lock className="size-4" />}
           {locked ? 'Unlock joining' : 'Lock joining'}
-        </button>
-        <button className="rounded border border-red-400 px-3 py-1 text-red-600" onClick={end}>
+        </Button>
+        <Button variant="danger" size="sm" onClick={() => setConfirmingEnd(true)}>
+          <LogOut className="size-4" />
           End session
-        </button>
+        </Button>
       </div>
-    </Card>
+      <ConfirmDialog
+        open={confirmingEnd}
+        title="End the session?"
+        body="Everyone is disconnected. This can't be undone."
+        confirmLabel="End session"
+        onConfirm={() => send(Command.SessionEnd)}
+        onCancel={() => setConfirmingEnd(false)}
+      />
+    </div>
   )
 }

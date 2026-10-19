@@ -1,4 +1,6 @@
+import { Wifi, WifiOff } from 'lucide-react'
 import { CloseReason, ConnectionStatus } from '../session/socket'
+import { Button } from './ui/Button'
 
 interface Props {
   status: ConnectionStatus
@@ -16,23 +18,34 @@ const CLOSED_TEXT: Record<CloseReason, string> = {
 export function ConnectionBadge({ status, closeReason, onReconnect }: Props) {
   if (status === ConnectionStatus.Closed && closeReason) {
     return (
-      <div className="flex flex-col gap-2 text-sm text-red-600 dark:text-red-400">
-        <p role="alert">{CLOSED_TEXT[closeReason]}</p>
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-danger/40 bg-danger-soft px-4 py-3 text-sm text-danger">
+        <WifiOff className="size-4 shrink-0" aria-hidden />
+        <p role="alert" className="flex-1">
+          {CLOSED_TEXT[closeReason]}
+        </p>
         {closeReason === CloseReason.Replaced && (
-          <button className="self-start underline" onClick={onReconnect}>
+          <Button size="sm" variant="danger" onClick={onReconnect}>
             Use this tab instead
-          </button>
+          </Button>
         )}
       </div>
     )
   }
-  const connected = status === ConnectionStatus.Open
+  if (status === ConnectionStatus.Open) {
+    return (
+      <p className="flex items-center gap-2 text-sm text-muted">
+        <span className="size-2 rounded-full bg-success" aria-hidden />
+        Connected
+      </p>
+    )
+  }
   return (
-    <p className="flex items-center gap-2 text-sm text-zinc-500">
-      <span
-        className={`size-2 rounded-full ${connected ? 'bg-green-500' : 'animate-pulse bg-amber-500'}`}
-      />
-      {connected ? 'Connected' : status === ConnectionStatus.Connecting ? 'Connecting…' : 'Reconnecting…'}
+    <p
+      role="status"
+      className="flex items-center gap-2 rounded-xl border border-warn/40 bg-warn/10 px-4 py-2 text-sm font-medium text-warn"
+    >
+      <Wifi className="size-4 animate-pulse" aria-hidden />
+      {status === ConnectionStatus.Connecting ? 'Connecting…' : 'Connection lost. Reconnecting…'}
     </p>
   )
 }
