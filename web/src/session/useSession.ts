@@ -65,9 +65,11 @@ export function useSession(identity: Identity | undefined) {
         onNotice: setLastNotice,
       },
     })
-    next.start()
     socketRef.current = next
+    // StrictMode runs this effect twice; a socket opened and closed at once can reach the server after the second and replace it
+    const timer = setTimeout(() => next.start(), 0)
     return () => {
+      clearTimeout(timer)
       next.stop()
       socketRef.current = null
     }
