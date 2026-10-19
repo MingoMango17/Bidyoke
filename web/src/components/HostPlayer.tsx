@@ -1,10 +1,15 @@
+import { Disc3, Pause, Play, SkipForward, Volume2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { usePlayback } from '../api/songs'
 import type { Identity } from '../lib/identity'
+import { playbackProgress } from '../lib/playbackProgress'
 import { PlaybackFailure } from '../lib/youtube'
 import { Command, PlayerStatus, SongSource } from '../protocol'
 import type { SessionApi } from '../session/useSession'
-import { buttonClass, Card } from './Layout'
+import { Card } from './Layout'
+import { Button } from './ui/Button'
+import { ProgressBar } from './ui/ProgressBar'
+import { Skeleton } from './ui/Skeleton'
 import { YouTubePlayer } from './YouTubePlayer'
 
 interface Props {
@@ -12,8 +17,16 @@ interface Props {
   session: SessionApi
 }
 
-const controlClass =
-  'rounded-lg border border-zinc-300 px-4 py-2 font-medium disabled:opacity-40 dark:border-zinc-700'
+function Stage({ icon: Icon, text }: { icon: typeof Disc3; text: string }) {
+  return (
+    <div className="grid size-full place-items-center bg-gradient-to-br from-violet-950 to-fuchsia-950 p-6 text-center text-white/80">
+      <div className="flex flex-col items-center gap-3">
+        <Icon className="size-10" aria-hidden />
+        <p>{text}</p>
+      </div>
+    </div>
+  )
+}
 
 export function HostPlayer({ identity, session }: Props) {
   const [started, setStarted] = useState(false)
@@ -21,6 +34,7 @@ export function HostPlayer({ identity, session }: Props) {
   const item = state?.nowPlaying ?? undefined
   const itemId = item?.itemId
   const playback = usePlayback(started ? item?.song.songId : undefined, identity.token)
+  const progress = playbackProgress(state)
   const { send } = session
 
   useEffect(() => {
@@ -29,13 +43,20 @@ export function HostPlayer({ identity, session }: Props) {
 
   if (!started) {
     return (
-      <Card title="Ready to start?">
-        <p className="mb-3 text-sm text-zinc-500">
-          Tap once so the browser allows sound, then songs play automatically.
-        </p>
-        <button className={buttonClass} onClick={() => setStarted(true)}>
+      <Card className="flex flex-col items-center gap-4 py-10 text-center">
+        <span className="grid size-14 place-items-center rounded-full bg-brand-soft text-brand">
+          <Volume2 className="size-7" aria-hidden />
+        </span>
+        <div>
+          <h2 className="font-display text-2xl font-semibold">Ready to start?</h2>
+          <p className="mx-auto mt-1 max-w-sm text-muted">
+            Tap once so the browser allows sound, then songs play automatically.
+          </p>
+        </div>
+        <Button size="lg" onClick={() => setStarted(true)}>
+          <Play className="size-5" />
           Start session
-        </button>
+        </Button>
       </Card>
     )
   }
@@ -45,9 +66,9 @@ export function HostPlayer({ identity, session }: Props) {
 
   let screen
   if (!item) {
-    screen = <p className="p-6 text-zinc-400">Waiting for the first song…</p>
+    screen = <Stage icon={Disc3} text="Waiting for the first song…" />
   } else if (info?.kind === SongSource.Local) {
-    screen = <p className="p-6 text-zinc-400">Library songs can't be played here yet.</p>
+    screen = <Stage icon={Disc3} text="Library songs can't be played here yet." />
   } else if (info?.kind === SongSource.YouTube) {
     screen = (
       <YouTubePlayer
@@ -59,30 +80,39 @@ export function HostPlayer({ identity, session }: Props) {
       />
     )
   } else {
-    screen = <p className="p-6 text-zinc-400">Loading song…</p>
+    screen = <Skeleton className="size-full rounded-none" />
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="aspect-video w-full overflow-hidden rounded-xl bg-black">{screen}</div>
-      {item && (
-        <p className="truncate text-lg font-semibold">
-          {item.song.title}
-          {item.song.artist && <span className="font-normal text-zinc-500"> · {item.song.artist}</span>}
-        </p>
-      )}
-      <div className="flex gap-2">
-        <button
-          className={controlClass}
-          disabled={!item}
-          onClick={() => send(playing ? Command.PlayerPause : Command.PlayerResume)}
-        >
-          {playing ? 'Pause' : 'Resume'}
-        </button>
-        <button className={controlClass} disabled={!item} onClick={() => send(Command.PlayerNext)}>
-          Next
-        </button>
+    <div className="flex flex-col gap-4">
+      <div className="aspect-video w-full overflow-hidden rounded-2xl bg-black shadow-lg">{screen}</div>
+      <div className="flex flex-wrap items-center gap-4">
+        <div className="min-w-0 flex-1">
+          {item ? (
+            <>
+              <p className="truncate font-display text-2xl font-semibold">{item.song.title}</p>
+              {item.song.artist && <p className="truncate text-muted">{item.song.artist}</p>}
+            </>
+          ) : (
+            <p className="font-display text-2xl font-semibold text-muted">Nothing playing</p>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <Button
+            size="lg"
+            disabled={!item}
+            onClick={() => send(playing ? Command.PlayerPause : Command.PlayerResume)}
+          >
+            {playing ? <Pause className="size-5" /> : <Play className="size-5" />}
+            {playing ? 'Pause' : 'Resume'}
+          </Button>
+          <Button size="lg" variant="secondary" disabled={!item} onClick={() => send(Command.PlayerNext)}>
+            <SkipForward className="size-5" />
+            Next
+          </Button>
+        </div>
       </div>
+      {item && <ProgressBar positionMs={progress} durationMs={item.song.durationMs} showTimes />}
     </div>
   )
 }
