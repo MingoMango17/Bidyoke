@@ -1,4 +1,4 @@
-import { groupSuggestions, SUGGESTION_TITLES } from '../lib/suggestions'
+import { groupSuggestions } from '../lib/suggestions'
 import type { Song, Suggestion } from '../protocol'
 import { Card } from './Layout'
 import { SongRow } from './SongRow'
@@ -12,8 +12,8 @@ interface Props {
 export function Suggestions({ suggestions, canAdd, onAdd }: Props) {
   return (
     <>
-      {groupSuggestions(suggestions).map(({ reason, songs }) => (
-        <Card key={reason} title={SUGGESTION_TITLES[reason]}>
+      {groupSuggestions(suggestions).map(({ reason, title, songs }) => (
+        <Card key={reason} title={title}>
           <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
             {songs.map((song) => (
               <SongRow

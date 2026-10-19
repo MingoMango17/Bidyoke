@@ -1,19 +1,24 @@
 import { SuggestionReason, type Song, type Suggestion } from '../protocol'
 
-export const SUGGESTION_TITLES: Record<SuggestionReason, string> = {
-  [SuggestionReason.PlayedHere]: 'Play again',
+const TITLES: Record<SuggestionReason, (context: string | null) => string> = {
+  [SuggestionReason.SameChannel]: (context) => `More from ${context ?? 'this channel'}`,
+  [SuggestionReason.PlayedHere]: () => 'Play again',
 }
 
 export interface SuggestionGroup {
   reason: SuggestionReason
+  title: string
   songs: Song[]
 }
 
 export function groupSuggestions(suggestions: Suggestion[]): SuggestionGroup[] {
-  const groups = new Map<SuggestionReason, Song[]>()
-  for (const { song, reason } of suggestions) {
-    if (!(reason in SUGGESTION_TITLES)) continue
-    groups.set(reason, [...(groups.get(reason) ?? []), song])
+  const groups = new Map<SuggestionReason, SuggestionGroup>()
+  for (const { song, reason, context } of suggestions) {
+    const title = TITLES[reason]
+    if (!title) continue
+    const group = groups.get(reason) ?? { reason, title: title(context), songs: [] }
+    group.songs.push(song)
+    groups.set(reason, group)
   }
-  return [...groups].map(([reason, songs]) => ({ reason, songs }))
+  return [...groups.values()]
 }
