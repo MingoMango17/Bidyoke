@@ -15,6 +15,7 @@ export const NoticeKind = {
   HostReconnected: 'host_reconnected',
   SessionLocked: 'session_locked',
   MemberKicked: 'member_kicked',
+  MemberPromoted: 'member_promoted',
 } as const
 export type NoticeKind = (typeof NoticeKind)[keyof typeof NoticeKind]
 
@@ -71,7 +72,7 @@ export interface SessionState {
   members: Member[]
   scores: Score[]
   suggestions: Suggestion[]
-  settings: { maxQueuePerMember: number; locked: boolean }
+  settings: { maxQueuePerMember: number | null; locked: boolean }
 }
 
 export interface Notice {
@@ -125,6 +126,9 @@ export const Command = {
   ScoreSubmit: 'score.submit',
   SessionLock: 'session.lock',
   SessionKick: 'session.kick',
+  SessionPromote: 'session.promote',
+  SessionDemote: 'session.demote',
+  SessionLimit: 'session.limit',
   SessionEnd: 'session.end',
 } as const
 
@@ -145,6 +149,9 @@ export interface CommandPayloads {
   }
   [Command.SessionLock]: { locked: boolean }
   [Command.SessionKick]: { memberId: string }
+  [Command.SessionPromote]: { memberId: string }
+  [Command.SessionDemote]: { memberId: string }
+  [Command.SessionLimit]: { maxQueuePerMember: number | null }
   [Command.SessionEnd]: undefined
 }
 

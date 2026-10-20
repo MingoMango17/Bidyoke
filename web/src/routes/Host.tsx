@@ -90,7 +90,7 @@ export function Host() {
                     onAdd={(song) => session.send(Command.QueueAdd, { songId: song.songId })}
                   />
                 )}
-                {tab === 'people' && <MemberList state={state} send={session.send} />}
+                {tab === 'people' && <MemberList state={state} send={session.send} viewerRole={Role.Host} />}
               </div>
             </div>
           ) : (

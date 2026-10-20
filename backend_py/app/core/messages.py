@@ -8,6 +8,9 @@ class ClientMessage(StrEnum):
 class Command(StrEnum):
     SESSION_LOCK = "session.lock"
     SESSION_KICK = "session.kick"
+    SESSION_PROMOTE = "session.promote"
+    SESSION_DEMOTE = "session.demote"
+    SESSION_LIMIT = "session.limit"
     SESSION_END = "session.end"
     QUEUE_ADD = "queue.add"
     QUEUE_REMOVE = "queue.remove"
@@ -31,6 +34,7 @@ class ServerMessage(StrEnum):
 
 class Role(StrEnum):
     HOST = "host"
+    SUBHOST = "subhost"
     GUEST = "guest"
 
 
@@ -43,6 +47,7 @@ class PlayerStatus(StrEnum):
 class NoticeKind(StrEnum):
     SONG_SKIPPED = "song_skipped"
     MEMBER_KICKED = "member_kicked"
+    MEMBER_PROMOTED = "member_promoted"
     HOST_DISCONNECTED = "host_disconnected"
     HOST_RECONNECTED = "host_reconnected"
 

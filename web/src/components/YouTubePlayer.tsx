@@ -1,20 +1,30 @@
 import { useEffect, useRef, useState } from 'react'
-import { loadYouTubeApi, PLAYER_STATE_ENDED, errorReason } from '../lib/youtube'
+import {
+  loadYouTubeApi,
+  PLAYER_STATE_ENDED,
+  PLAYER_STATE_PAUSED,
+  PLAYER_STATE_PLAYING,
+  errorReason,
+} from '../lib/youtube'
 
 interface Props {
   videoId: string
   playing: boolean
   onEnded: () => void
+  onPause: () => void
+  onResume: () => void
   onError: (reason: string) => void
   onPosition: (positionMs: number) => void
 }
 
 const POSITION_INTERVAL_MS = 1000
+const COMMAND_SETTLE_MS = 1500
 
 export function YouTubePlayer(props: Props) {
   const container = useRef<HTMLDivElement>(null)
   const player = useRef<YT.Player | null>(null)
   const latest = useRef(props)
+  const ignoreStateUntil = useRef(0)
   const [ready, setReady] = useState(false)
   const [loadError, setLoadError] = useState<string>()
 
@@ -38,6 +48,9 @@ export function YouTubePlayer(props: Props) {
             onReady: () => setReady(true),
             onStateChange: (event) => {
               if (event.data === PLAYER_STATE_ENDED) latest.current.onEnded()
+              if (Date.now() < ignoreStateUntil.current) return
+              if (event.data === PLAYER_STATE_PAUSED && latest.current.playing) latest.current.onPause()
+              if (event.data === PLAYER_STATE_PLAYING && !latest.current.playing) latest.current.onResume()
             },
             onError: (event) => latest.current.onError(errorReason(event.data)),
           },
@@ -52,11 +65,14 @@ export function YouTubePlayer(props: Props) {
   }, [])
 
   useEffect(() => {
-    if (ready) player.current?.loadVideoById(props.videoId)
+    if (!ready) return
+    ignoreStateUntil.current = Date.now() + COMMAND_SETTLE_MS
+    player.current?.loadVideoById(props.videoId)
   }, [props.videoId, ready])
 
   useEffect(() => {
     if (!ready) return
+    ignoreStateUntil.current = Date.now() + COMMAND_SETTLE_MS
     if (props.playing) player.current?.playVideo()
     else player.current?.pauseVideo()
   }, [props.playing, props.videoId, ready])

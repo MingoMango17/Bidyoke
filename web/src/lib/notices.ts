@@ -1,7 +1,7 @@
 import { NoticeKind, type Notice } from '../protocol'
 import { PlaybackFailure } from './youtube'
 
-export function noticeText(notice: Notice): string | undefined {
+export function noticeText(notice: Notice, memberId?: string): string | undefined {
   switch (notice.kind) {
     case NoticeKind.SongSkipped:
       return notice.reason === PlaybackFailure.EmbedBlocked
@@ -15,6 +15,8 @@ export function noticeText(notice: Notice): string | undefined {
       return 'The session no longer accepts new members.'
     case NoticeKind.MemberKicked:
       return 'A member was removed from the session.'
+    case NoticeKind.MemberPromoted:
+      return notice.memberId === memberId ? 'You are now a subhost.' : undefined
     default:
       return undefined
   }

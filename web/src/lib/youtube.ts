@@ -32,6 +32,8 @@ export function loadYouTubeApi(): Promise<typeof YT> {
 }
 
 export const PLAYER_STATE_ENDED = 0
+export const PLAYER_STATE_PLAYING = 1
+export const PLAYER_STATE_PAUSED = 2
 
 export const PlaybackFailure = {
   EmbedBlocked: 'embed_blocked',
