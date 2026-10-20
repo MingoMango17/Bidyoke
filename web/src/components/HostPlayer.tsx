@@ -76,6 +76,8 @@ export function HostPlayer({ identity, session }: Props) {
         videoId={info.videoId}
         playing={playing}
         onEnded={() => send(Command.PlayerEnded, { itemId: item.itemId })}
+        onPause={() => send(Command.PlayerPause)}
+        onResume={() => send(Command.PlayerResume)}
         onError={(reason) => send(Command.PlayerError, { itemId: item.itemId, reason })}
         onPosition={(positionMs) => {
           setLive({ itemId: item.itemId, positionMs })
