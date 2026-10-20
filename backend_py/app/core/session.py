@@ -87,6 +87,7 @@ class Session:
     resolve: Resolver = field(default=_no_song, repr=False, compare=False)
     channel: ChannelProvider = field(default=no_channel, repr=False, compare=False)
     locked: bool = False
+    max_queue_per_member: int | None = field(default_factory=lambda: config.MAX_QUEUE_PER_MEMBER)
     rev: int = 0
     last_activity: float = field(default_factory=time.monotonic)
     created_at: datetime = field(default_factory=_now)
@@ -129,13 +130,13 @@ class Session:
         if type_ == Command.QUEUE_MOVE:
             return Result(self._queue_move(member, payload))
         if type_ == Command.PLAYER_NEXT:
-            self._require_host(member)
+            self._require_manager(member)
             return Result(self._skip_current())
         if type_ == Command.PLAYER_PAUSE:
-            self._require_host(member)
+            self._require_manager(member)
             return Result(self._set_status(PlayerStatus.PLAYING, PlayerStatus.PAUSED))
         if type_ == Command.PLAYER_RESUME:
-            self._require_host(member)
+            self._require_manager(member)
             return Result(self._set_status(PlayerStatus.PAUSED, PlayerStatus.PLAYING))
         if type_ == Command.PLAYER_ENDED:
             self._require_host(member)
@@ -147,8 +148,18 @@ class Session:
             self._require_host(member)
             return self._report_position(payload)
         if type_ == Command.SESSION_KICK:
-            self._require_host(member)
-            return self._kick(payload)
+            self._require_manager(member)
+            return self._kick(member, payload)
+        if type_ == Command.SESSION_PROMOTE:
+            self._require_manager(member)
+            return self._promote(payload)
+        if type_ == Command.SESSION_DEMOTE:
+            self._require_manager(member)
+            self._set_role(payload, Role.SUBHOST, Role.GUEST)
+            return Result(True)
+        if type_ == Command.SESSION_LIMIT:
+            self._require_manager(member)
+            return Result(self._set_limit(payload))
         if type_ == Command.SESSION_END:
             self._require_host(member)
             return Result(ended=True)
@@ -242,15 +253,49 @@ class Session:
         self.touch()
         return True
 
-    def _kick(self, payload: dict) -> Result:
+    def _promote(self, payload: dict) -> Result:
+        target = self._set_role(payload, Role.GUEST, Role.SUBHOST)
+        notice = {"kind": NoticeKind.MEMBER_PROMOTED, "memberId": target.member_id}
+        return Result(True, (notice,))
+
+    def _set_role(self, payload: dict, expected: Role, new: Role) -> Member:
+        target = self._target_member(payload)
+        if target.role != expected:
+            raise CommandError(ErrorCode.INVALID_PAYLOAD, f"That member is not a {expected}.")
+        target.role = new
+        self.touch()
+        return target
+
+    def _set_limit(self, payload: dict) -> bool:
+        if "maxQueuePerMember" not in payload:
+            raise CommandError(ErrorCode.INVALID_PAYLOAD, "`maxQueuePerMember` is required.")
+        limit = payload["maxQueuePerMember"]
+        if limit is not None and (not isinstance(limit, int) or isinstance(limit, bool) or limit < 1):
+            raise CommandError(
+                ErrorCode.INVALID_PAYLOAD, "`maxQueuePerMember` must be a positive integer or null."
+            )
+        if limit == self.max_queue_per_member:
+            return False
+        self.max_queue_per_member = limit
+        self.touch()
+        return True
+
+    def _target_member(self, payload: dict) -> Member:
         member_id = payload.get("memberId")
         if not isinstance(member_id, str):
             raise CommandError(ErrorCode.INVALID_PAYLOAD, "`memberId` must be a string.")
         target = self.members.get(member_id)
         if target is None:
             raise CommandError(ErrorCode.INVALID_PAYLOAD, "No member with that id.")
+        return target
+
+    def _kick(self, member: Member, payload: dict) -> Result:
+        target = self._target_member(payload)
+        member_id = target.member_id
         if target.role == Role.HOST:
             raise CommandError(ErrorCode.INVALID_PAYLOAD, "The host cannot be kicked.")
+        if target.role == Role.SUBHOST and member.role != Role.HOST:
+            raise CommandError(ErrorCode.FORBIDDEN, "Only the host can remove a subhost.")
         del self.members[member_id]
         self.touch()
         notice = {"kind": NoticeKind.MEMBER_KICKED, "memberId": member_id}
@@ -291,10 +336,9 @@ class Session:
         mine = [i for i in self.queue if i.added_by == member.member_id]
         if any(i.song.song_id == song_id for i in mine):
             raise CommandError(ErrorCode.ALREADY_QUEUED, "You already queued that song.")
-        if len(mine) >= config.MAX_QUEUE_PER_MEMBER:
-            raise CommandError(
-                ErrorCode.QUEUE_FULL, f"You already have {config.MAX_QUEUE_PER_MEMBER} songs queued."
-            )
+        limit = self.max_queue_per_member
+        if limit is not None and len(mine) >= limit:
+            raise CommandError(ErrorCode.QUEUE_FULL, f"You already have {limit} songs queued.")
         if len(self.queue) >= config.MAX_QUEUE_TOTAL:
             raise CommandError(ErrorCode.QUEUE_FULL, "The queue is full.")
         item = QueueItem("q_" + secrets.token_hex(4), song, member.member_id, _now())
@@ -309,14 +353,14 @@ class Session:
 
     def _queue_remove(self, member: Member, payload: dict) -> bool:
         item = self._queued_item(payload)
-        if member.role != Role.HOST and item.added_by != member.member_id:
+        if member.role == Role.GUEST and item.added_by != member.member_id:
             raise CommandError(ErrorCode.FORBIDDEN, "Only the owner or host can remove that.")
         self.queue.remove(item)
         self.touch()
         return True
 
     def _queue_move(self, member: Member, payload: dict) -> bool:
-        self._require_host(member)
+        self._require_manager(member)
         item = self._queued_item(payload)
         to_index = payload.get("toIndex")
         if not isinstance(to_index, int) or isinstance(to_index, bool):
@@ -382,7 +426,7 @@ class Session:
             "scores": self.scores,
             "suggestions": [s.to_dict() for s in self.suggestions()],
             "settings": {
-                "maxQueuePerMember": config.MAX_QUEUE_PER_MEMBER,
+                "maxQueuePerMember": self.max_queue_per_member,
                 "locked": self.locked,
             },
         }
@@ -391,3 +435,8 @@ class Session:
     def _require_host(member: Member) -> None:
         if member.role != Role.HOST:
             raise CommandError(ErrorCode.FORBIDDEN, "Only the host can do that.")
+
+    @staticmethod
+    def _require_manager(member: Member) -> None:
+        if member.role == Role.GUEST:
+            raise CommandError(ErrorCode.FORBIDDEN, "Only the host or a subhost can do that.")

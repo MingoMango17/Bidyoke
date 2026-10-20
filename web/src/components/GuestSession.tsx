@@ -1,14 +1,18 @@
-import { ListMusic, Plus, Sparkles } from 'lucide-react'
+import { ListMusic, Plus, Settings2, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import { useConfig } from '../api/songs'
+import { Role } from '../api/types'
 import { Command } from '../protocol'
 import type { Identity } from '../lib/identity'
 import { endedReason } from '../session/closed'
 import { ConnectionStatus } from '../session/socket'
 import type { SessionApi } from '../session/useSession'
 import { ConnectionBadge } from './ConnectionBadge'
+import { HostQueue } from './HostQueue'
 import { Card } from './Layout'
+import { MemberList } from './MemberList'
 import { MiniPlayer } from './MiniPlayer'
+import { PlayerControls } from './PlayerControls'
 import { QueueList } from './QueueList'
 import { SessionClosed } from './SessionClosed'
 import { SessionFlashes } from './SessionFlashes'
@@ -23,22 +27,26 @@ interface Props {
   session: SessionApi
 }
 
-type Tab = 'queue' | 'add' | 'suggestions'
+type Tab = 'queue' | 'add' | 'suggestions' | 'manage'
 
 const PREFIX = 'guest'
 
 export function GuestSession({ identity, session }: Props) {
   const config = useConfig()
-  const [tab, setTab] = useState<Tab>('queue')
+  const [selectedTab, setTab] = useState<Tab>('queue')
   const { state } = session
   const mine = state?.queue.filter((item) => item.addedBy === identity.memberId) ?? []
-  const atCap = state !== undefined && mine.length >= state.settings.maxQueuePerMember
+  const limit = state?.settings.maxQueuePerMember ?? null
+  const atCap = limit !== null && mine.length >= limit
+  const isSubhost = state?.members.find((m) => m.memberId === identity.memberId)?.role === Role.Subhost
   const queuedIds = new Set(mine.map((item) => item.song.songId))
   const canAdd = session.status === ConnectionStatus.Open && !atCap
   const capText = atCap
-    ? `You have ${mine.length} of ${state.settings.maxQueuePerMember} songs queued. Remove one or wait for yours to play.`
+    ? `You have ${mine.length} of ${limit} songs queued. Remove one or wait for yours to play.`
     : undefined
   const disabledReason = capText ?? 'Reconnecting…'
+
+  const tab = selectedTab === 'manage' && !isSubhost ? 'queue' : selectedTab
 
   const over = endedReason(session.status, session.closeReason)
   if (over) return <SessionClosed reason={over} />
@@ -57,7 +65,7 @@ export function GuestSession({ identity, session }: Props) {
           onReconnect={session.reconnect}
         />
       </header>
-      <SessionFlashes session={session} />
+      <SessionFlashes session={session} memberId={identity.memberId} />
       {state ? (
         <div
           role="tabpanel"
@@ -96,6 +104,15 @@ export function GuestSession({ identity, session }: Props) {
                 </ul>
               </Card>
             ))}
+          {tab === 'manage' && isSubhost && (
+            <Card title="Manage session">
+              <div className="flex flex-col gap-4">
+                <PlayerControls state={state} send={session.send} />
+                <HostQueue state={state} send={session.send} />
+                <MemberList state={state} send={session.send} viewerRole={Role.Subhost} />
+              </div>
+            </Card>
+          )}
           {tab === 'suggestions' && (
             <Suggestions
               suggestions={state.suggestions}
@@ -128,6 +145,7 @@ export function GuestSession({ identity, session }: Props) {
                 { id: 'queue', label: 'Queue', icon: <ListMusic className="size-5" /> },
                 { id: 'add', label: 'Add', icon: <Plus className="size-5" /> },
                 { id: 'suggestions', label: 'Suggestions', icon: <Sparkles className="size-5" /> },
+                ...(isSubhost ? [{ id: 'manage' as const, label: 'Manage', icon: <Settings2 className="size-5" /> }] : []),
               ]}
             />
           </div>
