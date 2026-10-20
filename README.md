@@ -43,7 +43,7 @@ All settings are environment variables.
 | `FIXTURE_SONGS` | `off` | `on` serves six fixed test songs as the `local` source. |
 | `ALLOWED_ORIGINS` | – | Comma-separated WebSocket origins. Empty allows any. |
 | `PUBLIC_BASE_URL` | `http://localhost:5173` | Base of the join link returned on create. |
-| `MAX_QUEUE_PER_MEMBER` | `3` | Waiting songs per member. |
+| `MAX_QUEUE_PER_MEMBER` | `3` | Default waiting songs per member. The host or a subhost can change it per session, or make it unlimited. |
 | `MAX_QUEUE_TOTAL` | `100` | Waiting songs per session. |
 | `MAX_MEMBERS` | `50` | Members per session. |
 | `HOST_GRACE_SECONDS` | `120` | How long a disconnected host can come back before the session ends. |
@@ -52,6 +52,14 @@ All settings are environment variables.
 | `SEARCH_RATE_PER_MIN` | `20` | Searches per minute per member. |
 | `LOG_LEVEL` | `INFO` | Log verbosity: `DEBUG`, `INFO`, `WARNING`, `ERROR`. |
 | `MEDIA_AUTH` | `off` | Reserved for the local library. |
+
+## Roles
+
+- **Host**: the device that plays songs. Can do everything.
+- **Subhost**: a guest promoted by the host or another subhost. Can pause, resume, skip, reorder and remove songs, kick guests, promote and demote members, and change the songs-per-person limit. Cannot end the session, lock joining, or kick a subhost. Subhosts control playback from a Manage tab but do not play video on their own device.
+- **Guest**: searches, queues songs and removes their own.
+
+The host and subhosts set the songs-per-person limit under People. Pausing or resuming in the YouTube player itself is picked up by everyone. A promoted guest sees a toast.
 
 ## Suggestions
 
