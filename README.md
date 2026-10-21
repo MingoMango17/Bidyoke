@@ -30,6 +30,29 @@ The `/data` volume keeps the YouTube quota counter across restarts.
 
 Behind a reverse proxy (Caddy, Nginx) set `FORWARDED_ALLOW_IPS` to the proxy's address. Without it every guest appears to come from the proxy's IP and shares one join rate limit.
 
+## Deploy on one EC2 instance
+
+Caddy serves the built frontend and proxies `/api`, `/ws` and `/healthz` to the backend, all on one origin with automatic HTTPS.
+
+1. Launch an instance with Docker and the compose plugin. Open ports 80 and 443 in the security group. Attach an Elastic IP.
+2. Create a free subdomain at duckdns.org (for example `bidyoke`) and point it at the Elastic IP.
+3. Build the frontend on your machine and copy it up:
+
+   ```bash
+   cd web && npm ci && npm run build
+   rsync -av --delete dist/ ec2-user@<host>:~/Bidyoke/web/dist/
+   ```
+
+   Building on a 1 GB instance can run out of memory.
+4. On the instance, from the repo root:
+
+   ```bash
+   cp .env.example .env        # set DOMAIN and YOUTUBE_API_KEY
+   docker compose up -d --build
+   ```
+
+The site is then at `https://<DOMAIN>`. The quota counter and certificates live in Docker volumes and survive restarts. Other settings from the table below can be added under `backend.environment` in `docker-compose.yml`.
+
 ## Configuration
 
 All settings are environment variables.
